@@ -1,0 +1,4 @@
+.env
+infinity/models/
+data/
+prometheus/litellm_token
