@@ -1,98 +1,25 @@
-root@gpusrv02:/opt/llm-inference# HF_AUTO_DOWNLOAD=1 ./deploy.sh
-
-╔══════════════════════════════════════════════════════╗
-║        LLM Inference Stack — Deploy                 ║
-╚══════════════════════════════════════════════════════╝
-
-▶ Checking prerequisites
-[OK]  Docker 29.6.0
-[OK]  Python 3.13.5
-[OK]  PyYAML available
-[OK]  Found 2 GPU(s):
-       0, NVIDIA A100-SXM4-80GB, 81920 MiB
-       1, NVIDIA A100-SXM4-80GB, 81920 MiB
-
-▶ Configuring environment
-[OK]  .env configured
-
-▶ Rendering configs from models.yaml
-Rendering configs from models.yaml ...
-  [OK] litellm/config.yaml
-  [OK] ollama/init-models.sh
-  [OK] infinity/entrypoint.sh
-
-Done. Apply changes with:
-  docker compose restart litellm          # after chat/embedding/reranker changes
-  docker compose restart infinity         # after embedding/reranker changes
-  docker compose restart ollama-init      # to pull new Ollama models
-
-▶ Writing Prometheus auth token
-[OK]  prometheus/litellm_token written
-
-▶ Checking embedding / reranker model files
-  [OK]  All model files present
-
-▶ Validating docker-compose.yml
-[OK]  docker-compose.yml is valid
-
-▶ Starting all services
-[+] up 151/159
- ✔ Image grafana/grafana:11.0.0                                                                   Pulled                                                                                                    32.4s
- ✔ Image langfuse/langfuse:3.35.0                                                                 Pulled                                                                                                    47.6s
- ✔ Image postgres:16-alpine                                                                       Pulled                                                                                                    34.9s
- ⠦ Image ghcr.io/berriai/litellm:main-stable [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 387.8MB / 389.4MB               Pulling                                                                                                   86.6s
- ⠦ Image michaelf34/infinity:0.0.72 [⣿⣿⣄⣿⣿⣿⣿⣿⣿] 1.781GB / 3.345GB                                 Pulling                                                                                                   86.6s
- ✔ Image clickhouse/clickhouse-server:24.8-alpine                                                 Pulled                                                                                                    30.4s
- ✔ Image minio/mc:RELEASE.2024-11-05T11-29-45Z                                                    Pulled                                                                                                     9.4s
- ✔ Image redis:7.2-alpine                                                                         Pulled                                                                                                    13.1s
- ⠦ Image ollama/ollama:0.6.5 [⣿⣿⣿⣿⣿]  1.77GB / 1.772GB                                            Pulling                                                                                                   86.6s
- ⠦ Image nvcr.io/nvidia/k8s/dcgm-exporter:3.3.6-3.4.2-ubuntu22.04 [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 817.6MB / 819.5MB Pulling                                                                                                   86.6s
- ✔ Image minio/minio:RELEASE.2024-11-07T00-52-20Z                                                 Pulled                                                                                                    23.5s
- ✔ Image prom/prometheus:v2.53.0                                                                  Pulled                                                                                                    20.0s
- ✔ Image langfuse/langfuse-worker:3.35.0                                                          Pulled                                                                                                    75.2s
-failed to extract layer (application/vnd.oci.image.layer.v1.tar+gzip sha256:f45c5ef3e1815e8a007d5b0610846cfd8ddafdadd4695ba11fa582b03402d176) to overlayfs as "extract-941131564-cXuU sha256:3c9accce8fa84cf648518383ea7772b347fd5b583296b169c13e8e7e8df67a78": write /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/67/fs/usr/lib/ollama/cuda_v12/libggml-cuda.so: no space left on device
+root@gpusrv02:/opt/llm-inference# df -h                          # find the full partition
+docker system df               # Docker's own breakdown
+du -sh /var/lib/containerd /var/lib/docker /opt 2>/dev/null
+Filesystem      Size  Used Avail Use% Mounted on
+udev            252G     0  252G   0% /dev
+tmpfs            51G  2.9M   51G   1% /run
+/dev/sda2        46G   40G  3.4G  93% /
+tmpfs           252G   28M  252G   1% /dev/shm
+efivarfs        176K  112K   60K  66% /sys/firmware/efi/efivars
+tmpfs           5.0M     0  5.0M   0% /run/lock
+tmpfs           1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
+tmpfs           252G     0  252G   0% /tmp
+/dev/sda1       952M  8.8M  943M   1% /boot/efi
+/dev/fuse       128M   16K  128M   1% /etc/pve
+tmpfs           1.0M     0  1.0M   0% /run/credentials/getty@tty1.service
+tmpfs            51G  8.0K   51G   1% /run/user/0
+TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+Images          10        0         5.536GB   5.221GB (94%)
+Containers      0         0         0B        0B
+Local Volumes   0         0         0B        0B
+Build Cache     0         0         0B        0B
+11G     /var/lib/containerd
+240K    /var/lib/docker
+6.5G    /opt
 root@gpusrv02:/opt/llm-inference#
-
-menda 📊 🔎 Sizning server holati
-✅ CPU
-
-128 ta core (0–127) ko‘rinib turibdi
-Load:
-Load average: 0.30 0.77 0.52
-
-
-
-👉 Bu juda past, server deyarli idle
-
-✅ RAM
-
-RAM:
-3.55 GB / 504 GB
-
-
-
-👉 Sizda 504 GB RAM bor 🔥
-👉 Faqat 3.5 GB ishlayapti — deyarli bo‘sh
-
-✅ Tasks
-
-Total:
-49 tasks
-2 running
-
-
-
-👉 Server deyarli ishlamayapti (idle)
-
-✅ Uptime
-00:42:37
-
-👉 Server yangi reboot bo‘lgan
-
-❗ MUAMMO BU EMAS
-👉 CPU ✅
-👉 RAM ✅
-👉 GPU ✅ (oldin tekshirildi)
-🚨 Muammo: DISK
-Bu rasmda disk ko‘rinmayapti, lekin sizda xato chiqdi:
-no space left on device
