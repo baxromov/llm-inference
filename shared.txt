@@ -1,85 +1,14 @@
-root@gpusrv02:/opt/llm-inference# HF_AUTO_DOWNLOAD=1 ./deploy.sh
-
-╔══════════════════════════════════════════════════════╗
-║        LLM Inference Stack — Deploy                 ║
-╚══════════════════════════════════════════════════════╝
-
-▶ Checking prerequisites
-[OK]  Docker 29.6.0
-[OK]  Python 3.13.5
-[OK]  PyYAML available
-[!!]  Low disk space on /var/lib/docker: 3 GB free (need ~60 GB for images + models)
-[!!]  Run: df -h && docker system df
-[!!]  Fix: docker system prune -af  OR  move Docker data dir to a larger partition
-[!!]  See SETUP_GPU_SERVER.md → Troubleshooting → 'Docker data dir on small root disk'
-[ERR] Not enough disk space. Free up space or reconfigure Docker data directory.
-root@gpusrv02:/opt/llm-inference# df -h                          # find the full partition
-docker system df               # Docker's own breakdown
-du -sh /var/lib/containerd /var/lib/docker /opt 2>/dev/null
-Filesystem      Size  Used Avail Use% Mounted on
-udev            252G     0  252G   0% /dev
-tmpfs            51G  2.9M   51G   1% /run
-/dev/sda2        46G   40G  3.4G  93% /
-tmpfs           252G   28M  252G   1% /dev/shm
-efivarfs        176K  112K   60K  66% /sys/firmware/efi/efivars
-tmpfs           5.0M     0  5.0M   0% /run/lock
-tmpfs           1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
-tmpfs           252G     0  252G   0% /tmp
-/dev/sda1       952M  8.8M  943M   1% /boot/efi
-/dev/fuse       128M   16K  128M   1% /etc/pve
-tmpfs           1.0M     0  1.0M   0% /run/credentials/getty@tty1.service
-tmpfs            51G  8.0K   51G   1% /run/user/0
-TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
-Images          10        0         5.536GB   5.221GB (94%)
-Containers      0         0         0B        0B
-Local Volumes   0         0         0B        0B
-Build Cache     0         0         0B        0B
-11G     /var/lib/containerd
-240K    /var/lib/docker
-6.5G    /opt
-root@gpusrv02:/opt/llm-inference# qm list
-      VMID NAME                 STATUS     MEM(MB)    BOOTDISK(GB) PID
-       200 ubuntu24-04          stopped    16384             20.00 0
-root@gpusrv02:/opt/llm-inference# qm resize 200 scsi0 +150G
-Image resized.
-root@gpusrv02:/opt/llm-inference# apt install -y cloud-guest-utils
-Installing:
-  cloud-guest-utils
-
-Suggested packages:
-  cloud-init
-
-Summary:
-  Upgrading: 0, Installing: 1, Removing: 0, Not Upgrading: 40
-  Download size: 27.9 kB
-  Space needed: 72.7 kB / 3,593 MB available
-
-Get:1 http://deb.debian.org/debian trixie/main amd64 cloud-guest-utils all 0.33-1 [27.9 kB]
-Fetched 27.9 kB in 0s (83.2 kB/s)
-Selecting previously unselected package cloud-guest-utils.
-(Reading database ... 103829 files and directories currently installed.)
-Preparing to unpack .../cloud-guest-utils_0.33-1_all.deb ...
-Unpacking cloud-guest-utils (0.33-1) ...
-Setting up cloud-guest-utils (0.33-1) ...
-Processing triggers for man-db (2.13.1-1) ...
-root@gpusrv02:/opt/llm-inference# growpart /dev/sda 2
-NOCHANGE: partition 2 is size 97656832. it cannot be grown
-root@gpusrv02:/opt/llm-inference# resize2fs /dev/sda2
-resize2fs 1.47.2 (1-Jan-2025)
-The filesystem is already 12207104 (4k) blocks long.  Nothing to do!
-
-root@gpusrv02:/opt/llm-inference# df -h
-Filesystem      Size  Used Avail Use% Mounted on
-udev            252G     0  252G   0% /dev
-tmpfs            51G  2.9M   51G   1% /run
-/dev/sda2        46G   40G  3.4G  93% /
-tmpfs           252G   28M  252G   1% /dev/shm
-efivarfs        176K  112K   60K  66% /sys/firmware/efi/efivars
-tmpfs           5.0M     0  5.0M   0% /run/lock
-tmpfs           1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
-tmpfs           252G     0  252G   0% /tmp
-/dev/sda1       952M  8.8M  943M   1% /boot/efi
-/dev/fuse       128M   16K  128M   1% /etc/pve
-tmpfs           1.0M     0  1.0M   0% /run/credentials/getty@tty1.service
-tmpfs            51G  8.0K   51G   1% /run/user/0
+root@gpusrv02:/opt/llm-inference# lsblk
+NAME    MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+sda       8:0    0 186.3G  0 disk
+├─sda1    8:1    0   953M  0 part /boot/efi
+├─sda2    8:2    0  46.6G  0 part /
+└─sda3    8:3    0 138.8G  0 part [SWAP]
+nvme0n1 259:1    0   2.9T  0 disk
+nvme3n1 259:3    0   2.9T  0 disk
+nvme2n1 259:5    0   2.9T  0 disk
+nvme1n1 259:7    0   2.9T  0 disk
+root@gpusrv02:/opt/llm-inference# pvs 2>/dev/null; vgs 2>/dev/null; lvs 2>/dev/null
+root@gpusrv02:/opt/llm-inference# zpool list 2>/dev/null
+no pools available
 root@gpusrv02:/opt/llm-inference#
