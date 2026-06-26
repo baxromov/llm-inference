@@ -1,49 +1,11 @@
-PS C:\Users\bakhromovshb> ssh root@172.31.230.3
-Linux gpusrv02.local 6.14.11-9-pve #1 SMP PREEMPT_DYNAMIC PMX 6.14.11-9 (2026-05-15T09:33Z) x86_64
-
-The programs included with the Debian GNU/Linux system are free software;
-the exact distribution terms for each program are described in the
-individual files in /usr/share/doc/*/copyright.
-
-Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
-permitted by applicable law.
-Last login: Fri Jun 26 15:39:58 2026 from 192.168.41.32
+root@gpusrv02:~# apt remove -y proxmox-headers-7.0.6-2-pve
+Package 'proxmox-headers-7.0.6-2-pve' is not installed, so not removed
+Summary:
+  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 40
+root@gpusrv02:~# apt --fix-broken install -y
+Summary:
+  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 40
 root@gpusrv02:~# nvidia-smi
 -bash: nvidia-smi: command not found
-root@gpusrv02:~# dkms status
-nvidia-current/550.163.01, 6.14.11-9-pve, x86_64: installed
-root@gpusrv02:~# modprobe nvidia
-root@gpusrv02:~# nvidia-smi
--bash: nvidia-smi: command not found
-root@gpusrv02:~# ls /lib
-lib/   lib64/
-root@gpusrv02:~# ls /lib
-lib/   lib64/
-root@gpusrv02:~# ls /lib/modules/$(uname -r)/updates/dkms/ | grep nvidia
-nvidia-current-drm.ko
-nvidia-current.ko
-nvidia-current-modeset.ko
-nvidia-current-peermem.ko
-nvidia-current-uvm.ko
-root@gpusrv02:~# dmesg | grep -i nvidia | tail -20
-[   16.141157] nvidia-nvswitch: Probing device 0000:ab:00.0, Vendor Id = 0x10de, Device Id = 0x1af1, Class = 0x68000
-[   16.141459] nvidia-nvswitch 0000:ab:00.0: enabling device (0140 -> 0142)
-[   16.321236] nvidia-nvswitch2: using MSI
-[   16.499962] nvidia-nvswitch: Probing device 0000:ac:00.0, Vendor Id = 0x10de, Device Id = 0x1af1, Class = 0x68000
-[   16.500286] nvidia-nvswitch 0000:ac:00.0: enabling device (0140 -> 0142)
-[   16.681051] nvidia-nvswitch3: using MSI
-[   16.860096] nvidia-nvswitch: Probing device 0000:ad:00.0, Vendor Id = 0x10de, Device Id = 0x1af1, Class = 0x68000
-[   16.860591] nvidia-nvswitch 0000:ad:00.0: enabling device (0140 -> 0142)
-[   17.040130] nvidia-nvswitch4: using MSI
-[   17.219229] nvidia-nvswitch: Probing device 0000:ae:00.0, Vendor Id = 0x10de, Device Id = 0x1af1, Class = 0x68000
-[   17.219671] nvidia-nvswitch 0000:ae:00.0: enabling device (0140 -> 0142)
-[   17.400191] nvidia-nvswitch5: using MSI
-[   17.582119] nvidia 0000:48:00.0: enabling device (0140 -> 0142)
-[   17.634280] nvidia 0000:0b:00.0: enabling device (0140 -> 0142)
-[   17.676519] NVRM: loading NVIDIA UNIX x86_64 Kernel Module  550.163.01  Tue Apr  8 12:41:17 UTC 2025
-[   17.697507] nvidia-modeset: Loading NVIDIA Kernel Mode Setting Driver for UNIX platforms  550.163.01  Tue Apr  8 12:09:34 UTC 2025
-[   17.709505] [drm] [nvidia-drm] [GPU ID 0x00004800] Loading driver
-[   17.709511] [drm] Initialized nvidia-drm 0.0.0 for 0000:48:00.0 on minor 1
-[   17.709650] [drm] [nvidia-drm] [GPU ID 0x00000b00] Loading driver
-[   17.709655] [drm] Initialized nvidia-drm 0.0.0 for 0000:0b:00.0 on minor 2
+root@gpusrv02:~# find /usr -name nvidia-smi 2>/dev/null
 root@gpusrv02:~#
