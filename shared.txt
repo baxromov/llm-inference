@@ -1,29 +1,78 @@
-Windows PowerShell
-(C) Корпорация Майкрософт (Microsoft Corporation). Все права защищены.
+root@gpusrv02:~# apt-cache search nvidia | grep -iE "(driver|dkms|kernel)" | sort
+vdpau-driver-all - Video Decode and Presentation API for Unix (driver metapackage)
+root@gpusrv02:~# # Search for available NVIDIA packages in the configured repos
+apt-cache search nvidia | grep -iE "(driver|dkms|kernel)" | sort
+vdpau-driver-all - Video Decode and Presentation API for Unix (driver metapackage)
+root@gpusrv02:~# # --no-install-recommends skips X11/xserver packages (headless server)
+apt install -y --no-install-recommends nvidia-driver
+Error: Unable to locate package nvidia-driver
+root@gpusrv02:~# # Option 1: versioned meta-package (e.g. 570, 550, 535 — use the version shown by apt-cache search)
+apt install -y --no-install-recommends nvidia-driver-570
 
-Установите последнюю версию PowerShell для новых функций и улучшения! https://aka.ms/PSWindows
+# Option 2: just the kernel module + userspace utils
+apt install -y nvidia-kernel-dkms nvidia-driver-libs nvidia-open
 
-PS C:\Users\bakhromovshb> ssh root@172.31.230.3
-Linux gpusrv02.local 7.0.6-2-pve #1 SMP PREEMPT_DYNAMIC PMX 7.0.6-2 (2026-05-29T11:08Z) x86_64
-
-The programs included with the Debian GNU/Linux system are free software;
-the exact distribution terms for each program are described in the
-individual files in /usr/share/doc/*/copyright.
-
-Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
-permitted by applicable law.
-Last login: Fri Jun 26 14:59:27 2026 from 192.168.41.32
-root@gpusrv02:~# # --no-install-recommends skips xserver-xorg-video-nvidia and other X11 packages
-# (this is a headless server — no display needed)
-apt install -y --no-install-recommends \
-  nvidia-driver \
-  nvidia-smi \
-  nvidia-kernel-dkms
+# Option 3: check exact package name interactively
+apt-cache search nvidia | grep -i "nvidia-driver" | awk '{print $1}'
+Error: Unable to locate package nvidia-driver-570
 Package nvidia-kernel-dkms is not available, but is referred to by another package.
 This may mean that the package is missing, has been obsoleted, or
 is only available from another source
 
-Error: Unable to locate package nvidia-driver
-Error: Unable to locate package nvidia-smi
 Error: Package 'nvidia-kernel-dkms' has no installation candidate
-root@gpusrv02:~#
+Error: Unable to locate package nvidia-driver-libs
+Error: Unable to locate package nvidia-open
+root@gpusrv02:~# cd /tmp
+
+# This script tries known Tesla driver versions until one is found on NVIDIA's servers
+for VER in 570.86.15 565.57.01 550.127.05 550.90.07 535.183.06; do
+  URL="https://us.download.nvidia.com/tesla/${VER}/NVIDIA-Linux-x86_64-${VER}.run"
+  STATUS=$(curl -o /dev/null -s -w "%{http_code}" --head "$URL")
+  if [ "$STATUS" = "200" ]; then
+    echo "✓ Found: $URL"
+    DRIVER_URL="$URL"
+    DRIVER_VER="$VER"
+    break
+  else
+    echo "✗ Not found: ${VER} (HTTP ${STATUS})"
+  fi
+done
+
+echo "Will download: $DRIVER_URL"
+✓ Found: https://us.download.nvidia.com/tesla/570.86.15/NVIDIA-Linux-x86_64-570.86.15.run
+Will download: https://us.download.nvidia.com/tesla/570.86.15/NVIDIA-Linux-x86_64-570.86.15.run
+root@gpusrv02:/tmp# wget "$DRIVER_URL"
+chmod +x "NVIDIA-Linux-x86_64-${DRIVER_VER}.run"
+
+./NVIDIA-Linux-x86_64-${DRIVER_VER}.run \
+  --no-x-check \
+  --no-opengl-files \
+  --silent \
+  --dkms
+--2026-06-26 15:11:17--  https://us.download.nvidia.com/tesla/570.86.15/NVIDIA-Linux-x86_64-570.86.15.run
+Resolving us.download.nvidia.com (us.download.nvidia.com)... 2.16.172.200, 2.16.172.240
+Connecting to us.download.nvidia.com (us.download.nvidia.com)|2.16.172.200|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 375502111 (358M) [application/octet-stream]
+Saving to: ‘NVIDIA-Linux-x86_64-570.86.15.run’
+
+NVIDIA-Linux-x86_64-570.86.15.run                    100%[===================================================================================================================>] 358.11M  4.41MB/s    in 80s
+
+2026-06-26 15:12:39 (4.49 MB/s) - ‘NVIDIA-Linux-x86_64-570.86.15.run’ saved [375502111/375502111]
+
+Verifying archive integrity... OK
+Uncompressing NVIDIA Accelerated Graphics Driver for Linux-x86_64 570.86.15.......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+
+ERROR: An error occurred while performing the step: "Building kernel modules". See /var/log/nvidia-installer.log for details.
+
+
+ERROR: An error occurred while performing the step: "Checking to see whether the nvidia kernel module was successfully built". See /var/log/nvidia-installer.log for details.
+
+
+ERROR: The nvidia kernel module was not created.
+
+
+ERROR: Installation has failed.  Please see the file '/var/log/nvidia-installer.log' for details.  You may find suggestions on fixing installation problems in the README available on the Linux driver download
+       page at www.nvidia.com.
+
+root@gpusrv02:/tmp#
