@@ -160,16 +160,16 @@ for m in missing:
     print(f"         • {m['hf_repo']}")
 
 if os.environ.get('HF_AUTO_DOWNLOAD', '0') == '1':
-    # Resolve huggingface-cli: prefer system install, fall back to a local venv
-    hf_cli = 'huggingface-cli'
+    # Resolve hf CLI: prefer system install, fall back to a local venv
+    hf_cli = 'hf'
     try:
         subprocess.check_call([hf_cli, '--version'],
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except (subprocess.CalledProcessError, FileNotFoundError):
         venv_dir = Path('.hf-venv')
-        venv_cli = venv_dir / 'bin' / 'huggingface-cli'
+        venv_cli = venv_dir / 'bin' / 'hf'
         if not venv_cli.exists():
-            print("  huggingface-cli not found — creating local venv (.hf-venv) ...")
+            print("  hf CLI not found — creating local venv (.hf-venv) ...")
             try:
                 subprocess.check_call([sys.executable, '-m', 'venv', str(venv_dir)])
             except subprocess.CalledProcessError:
@@ -179,7 +179,7 @@ if os.environ.get('HF_AUTO_DOWNLOAD', '0') == '1':
                 subprocess.check_call(['apt', 'install', '-y', pkg])
                 subprocess.check_call([sys.executable, '-m', 'venv', str(venv_dir)])
             subprocess.check_call([str(venv_dir / 'bin' / 'pip'), 'install',
-                                    'huggingface-hub[cli]', '-q'])
+                                    'huggingface_hub', '-q'])
         hf_cli = str(venv_cli)
 
     for m in missing:
@@ -199,7 +199,7 @@ else:
     print("  Or download manually:")
     for m in missing:
         dest = Path('infinity/models') / m['hf_repo']
-        print(f"    huggingface-cli download {m['hf_repo']} --local-dir {dest}")
+        print(f"    hf download {m['hf_repo']} --local-dir {dest}")
     sys.exit(1)
 PYEOF
 fi
