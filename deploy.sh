@@ -160,40 +160,27 @@ for m in missing:
     print(f"         • {m['hf_repo']}")
 
 if os.environ.get('HF_AUTO_DOWNLOAD', '0') == '1':
-    # Ensure huggingface-cli is available, trying multiple pip paths
+    # Resolve huggingface-cli: prefer system install, fall back to a local venv
+    hf_cli = 'huggingface-cli'
     try:
-        subprocess.check_call(['huggingface-cli', '--version'],
+        subprocess.check_call([hf_cli, '--version'],
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except (subprocess.CalledProcessError, FileNotFoundError):
-        installed = False
-        pip_candidates = [['pip3'], ['pip'], [sys.executable, '-m', 'pip']]
-        for pip_cmd in pip_candidates:
-            try:
-                subprocess.check_call(pip_cmd + ['install', 'huggingface-hub[cli]', '-q'])
-                installed = True
-                break
-            except (subprocess.CalledProcessError, FileNotFoundError):
-                pass
-        if not installed:
-            # Last resort: bootstrap pip via ensurepip then retry
-            try:
-                subprocess.check_call([sys.executable, '-m', 'ensurepip', '--upgrade'],
-                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'huggingface-hub[cli]', '-q'])
-                installed = True
-            except (subprocess.CalledProcessError, FileNotFoundError):
-                pass
-        if not installed:
-            print("  [ERR] Cannot install huggingface-hub: pip not available.")
-            print("        Fix: apt install python3-pip && pip3 install huggingface-hub")
-            sys.exit(1)
+        venv_dir = Path('.hf-venv')
+        venv_cli = venv_dir / 'bin' / 'huggingface-cli'
+        if not venv_cli.exists():
+            print("  huggingface-cli not found — creating local venv (.hf-venv) ...")
+            subprocess.check_call([sys.executable, '-m', 'venv', str(venv_dir)])
+            subprocess.check_call([str(venv_dir / 'bin' / 'pip'), 'install',
+                                    'huggingface-hub[cli]', '-q'])
+        hf_cli = str(venv_cli)
 
     for m in missing:
         dest = Path('infinity/models') / m['hf_repo']
         dest.mkdir(parents=True, exist_ok=True)
         print(f"  Downloading {m['hf_repo']} → {dest} ...")
         subprocess.check_call([
-            'huggingface-cli', 'download', m['hf_repo'],
+            hf_cli, 'download', m['hf_repo'],
             '--local-dir', str(dest)
         ])
     print("  [OK]  All models downloaded")
