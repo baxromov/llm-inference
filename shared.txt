@@ -45,32 +45,56 @@ package, recreate your virtual environment.
 
 Failing command: /opt/llm-inference/.hf-venv/bin/python3
 
-Traceback (most recent call last):
-  File "<stdin>", line 27, in <module>
-  File "/usr/lib/python3.13/subprocess.py", line 414, in check_call
-    retcode = call(*popenargs, **kwargs)
-  File "/usr/lib/python3.13/subprocess.py", line 395, in call
-    with Popen(*popenargs, **kwargs) as p:
-         ~~~~~^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.13/subprocess.py", line 1039, in __init__
-    self._execute_child(args, executable, preexec_fn, close_fds,
-    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                        pass_fds, cwd, env,
-                        ^^^^^^^^^^^^^^^^^^^
-    ...<5 lines>...
-                        gid, gids, uid, umask,
-                        ^^^^^^^^^^^^^^^^^^^^^^
-                        start_new_session, process_group)
-                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.13/subprocess.py", line 1972, in _execute_child
-    raise child_exception_type(errno_num, err_msg, err_filename)
-FileNotFoundError: [Errno 2] No such file or directory: 'huggingface-cli'
+  python3-venv missing — running: apt install -y python3.13-venv
+Installing:
+  python3.13-venv
 
-During handling of the above exception, another exception occurred:
+Installing dependencies:
+  python3-pip-whl  python3-setuptools-whl
+
+Summary:
+  Upgrading: 0, Installing: 3, Removing: 0, Not Upgrading: 40
+  Download size: 2,781 kB
+  Space needed: 2,951 kB / 21.9 GB available
+
+Get:1 http://deb.debian.org/debian trixie/main amd64 python3-pip-whl all 25.1.1+dfsg-1 [1,507 kB]
+Get:2 http://deb.debian.org/debian trixie/main amd64 python3-setuptools-whl all 78.1.1-0.1 [1,268 kB]
+Get:3 http://deb.debian.org/debian trixie/main amd64 python3.13-venv amd64 3.13.5-2+deb13u2 [5,476 B]
+Fetched 2,781 kB in 1s (2,841 kB/s)
+Selecting previously unselected package python3-pip-whl.
+(Reading database ... 103811 files and directories currently installed.)
+Preparing to unpack .../python3-pip-whl_25.1.1+dfsg-1_all.deb ...
+Unpacking python3-pip-whl (25.1.1+dfsg-1) ...
+Selecting previously unselected package python3-setuptools-whl.
+Preparing to unpack .../python3-setuptools-whl_78.1.1-0.1_all.deb ...
+Unpacking python3-setuptools-whl (78.1.1-0.1) ...
+Selecting previously unselected package python3.13-venv.
+Preparing to unpack .../python3.13-venv_3.13.5-2+deb13u2_amd64.deb ...
+Unpacking python3.13-venv (3.13.5-2+deb13u2) ...
+Setting up python3-setuptools-whl (78.1.1-0.1) ...
+Setting up python3-pip-whl (25.1.1+dfsg-1) ...
+Setting up python3.13-venv (3.13.5-2+deb13u2) ...
+WARNING: huggingface-hub 1.21.0 does not provide the extra 'cli'
+  Downloading BAAI/bge-m3 → infinity/models/BAAI/bge-m3 ...
+Warning: `huggingface-cli` is deprecated and no longer works. Use `hf` instead.
+
+Hint: Install `hf`:
+  Standalone (recommended): curl -LsSf https://hf.co/cli/install.sh | bash
+  Using Homebrew:           brew install hf
+  Using pip:                pip install huggingface_hub
+
+Hint: Examples:
+  hf auth login
+  hf download unsloth/gemma-4-31B-it-GGUF
+  hf upload my-cool-model . .
+  hf models ls --search "gemma"
+  hf repos ls --format json
+  hf jobs run python:3.12 python -c 'print("Hello!")'
+  hf --help
 
 Traceback (most recent call last):
-  File "<stdin>", line 34, in <module>
+  File "<stdin>", line 50, in <module>
   File "/usr/lib/python3.13/subprocess.py", line 419, in check_call
     raise CalledProcessError(retcode, cmd)
-subprocess.CalledProcessError: Command '['/usr/bin/python3', '-m', 'venv', '.hf-venv']' returned non-zero exit status 1.
+subprocess.CalledProcessError: Command '['.hf-venv/bin/huggingface-cli', 'download', 'BAAI/bge-m3', '--local-dir', 'infinity/models/BAAI/bge-m3']' returned non-zero exit status 1.
 root@gpusrv02:/opt/llm-inference#
