@@ -52,6 +52,19 @@ if ! python3 -c "import yaml" 2>/dev/null; then
 fi
 ok "PyYAML available"
 
+# Disk space check: Docker images + Ollama model + HF models need ~60 GB minimum
+DOCKER_ROOT=$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || echo "/var/lib/docker")
+FREE_KB=$(df --output=avail "$DOCKER_ROOT" 2>/dev/null | tail -1 | tr -d ' ')
+FREE_GB=$(( ${FREE_KB:-0} / 1024 / 1024 ))
+if [[ $FREE_GB -lt 60 ]]; then
+  warn "Low disk space on $DOCKER_ROOT: ${FREE_GB} GB free (need ~60 GB for images + models)"
+  warn "Run: df -h && docker system df"
+  warn "Fix: docker system prune -af  OR  move Docker data dir to a larger partition"
+  warn "See SETUP_GPU_SERVER.md → Troubleshooting → 'Docker data dir on small root disk'"
+  err "Not enough disk space. Free up space or reconfigure Docker data directory."
+fi
+ok "Disk space: ${FREE_GB} GB free on $DOCKER_ROOT"
+
 if [[ $NO_GPU -eq 0 ]]; then
   command -v nvidia-smi >/dev/null 2>&1 || err "nvidia-smi not found. Use --no-gpu to skip GPU checks."
   GPU_COUNT=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | wc -l | tr -d ' ')

@@ -695,12 +695,84 @@ docker compose ps ollama
 docker compose logs litellm | tail -30
 ```
 
-### Out of disk space for model files
+### Out of disk space (`no space left on device` during docker compose up)
+
+**Symptom:** `failed to extract layer … write … libggml-cuda.so: no space left on device`
+
+**Root cause:** Proxmox VMs often have a small root disk (50–100 GB). Docker stores images in
+`/var/lib/containerd` and volumes in `/var/lib/docker/volumes/` — both on the root partition by
+default. The full stack needs ~60–80 GB:
+
+| Component | Size |
+|---|---|
+| Docker images (13 services) | ~20 GB |
+| Ollama Qwen 27B model (volume) | ~17 GB |
+| HF embedding + reranker models | ~7 GB |
+| OS + NVIDIA drivers | ~10 GB |
+| **Total** | **~54–80 GB** |
+
+**Step 1 — Check what's full:**
 
 ```bash
+df -h                          # find the full partition
+docker system df               # Docker's own breakdown
+du -sh /var/lib/containerd /var/lib/docker /opt 2>/dev/null
+```
+
+**Step 2a — If there is a separate large data disk** (e.g. `/data`, `/mnt/disk`, check with `lsblk`):
+
+Move Docker's data directory to it:
+
+```bash
+# Stop Docker
+systemctl stop docker containerd
+
+# Move existing data (skip if starting fresh)
+mv /var/lib/docker /data/docker
+
+# Tell Docker to use the new path
+mkdir -p /etc/docker
+cat > /etc/docker/daemon.json << 'EOF'
+{
+  "data-root": "/data/docker"
+}
+EOF
+
+# Start Docker
+systemctl start containerd docker
+
+# Verify
+docker info | grep "Docker Root Dir"   # should show /data/docker
+```
+
+Then re-run the deploy:
+
+```bash
+HF_AUTO_DOWNLOAD=1 ./deploy.sh
+```
+
+**Step 2b — If no separate disk, free up space first:**
+
+```bash
+# Remove all stopped containers, dangling images, unused networks, build cache
+docker system prune -af
+
+# Check how much is free now
 df -h /
-# Docker images + Ollama models + HF models take ~80–100 GB total
-# Make sure /opt or wherever you cloned has enough space
+
+# Then retry
+HF_AUTO_DOWNLOAD=1 ./deploy.sh
+```
+
+**Step 2c — Extend the root partition via Proxmox:**
+
+In Proxmox web UI → VM → Hardware → Hard Disk → Resize Disk. Then on the guest:
+
+```bash
+# Resize the partition and filesystem (for ext4 on LVM)
+lvextend -l +100%FREE /dev/ubuntu-vg/ubuntu-lv   # adjust LV path as needed
+resize2fs /dev/ubuntu-vg/ubuntu-lv
+df -h /
 ```
 
 ### Full reset (nuclear option)
@@ -762,7 +834,7 @@ mkdir -p /opt/docker-images
 
 docker save ollama/ollama:0.6.5           | gzip > /opt/docker-images/ollama.tar.gz
 docker save michaelf34/infinity:0.0.72    | gzip > /opt/docker-images/infinity.tar.gz
-docker save ghcr.io/berriai/litellm:main-v1.57.0-stable | gzip > /opt/docker-images/litellm.tar.gz
+docker save ghcr.io/berriai/litellm:main-stable | gzip > /opt/docker-images/litellm.tar.gz
 docker save langfuse/langfuse:3.35.0      | gzip > /opt/docker-images/langfuse-web.tar.gz
 docker save langfuse/langfuse-worker:3.35.0 | gzip > /opt/docker-images/langfuse-worker.tar.gz
 docker save postgres:16-alpine            | gzip > /opt/docker-images/postgres.tar.gz
