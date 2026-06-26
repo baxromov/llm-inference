@@ -3,10 +3,8 @@
 set -e
 
 exec infinity_emb v2 \
-  --model-name-or-path "/models/BAAI/bge-m3" \
-  --served-model-name "BAAI/bge-m3" \
-  --model-name-or-path "/models/BAAI/bge-reranker-v2-m3" \
-  --served-model-name "BAAI/bge-reranker-v2-m3" \
+  --served-model-name "/models/BAAI/bge-m3" \
+  --served-model-name "/models/BAAI/bge-reranker-v2-m3" \
   --port 7997 \
   --engine torch \
   --dtype float16 \

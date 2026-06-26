@@ -34,24 +34,24 @@ model_list:
 
   - model_name: BAAI/bge-m3
     litellm_params:
-      model: openai/BAAI/bge-m3
+      model: openai//models/BAAI/bge-m3
       api_base: http://infinity:7997/v1
 
   - model_name: text-embedding-3-large
     litellm_params:
-      model: openai/BAAI/bge-m3
+      model: openai//models/BAAI/bge-m3
       api_base: http://infinity:7997/v1
 
   # ── RERANKER models via Infinity ─────────────────────────────────────
 
   - model_name: BAAI/bge-reranker-v2-m3
     litellm_params:
-      model: openai/BAAI/bge-reranker-v2-m3
+      model: openai//models/BAAI/bge-reranker-v2-m3
       api_base: http://infinity:7997/v1
 
   - model_name: rerank-english-v3.0
     litellm_params:
-      model: openai/BAAI/bge-reranker-v2-m3
+      model: openai//models/BAAI/bge-reranker-v2-m3
       api_base: http://infinity:7997/v1
 
 # ── LITELLM SETTINGS ─────────────────────────────────────────────────────────
