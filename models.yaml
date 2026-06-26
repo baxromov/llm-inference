@@ -77,4 +77,4 @@ infinity:
   engine: torch
   dtype: float16
   batch_size: 64
-  device: cuda
+  device: cpu

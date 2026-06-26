@@ -11,4 +11,4 @@ exec infinity_emb v2 \
   --engine torch \
   --dtype float16 \
   --batch-size 64 \
-  --device cuda
+  --device cpu
