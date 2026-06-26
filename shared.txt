@@ -1,54 +1,108 @@
-root@gpusrv02:/tmp# apt-cache search proxmox-kernel | grep -v debug | grep -v signed | grep -v headers
-proxmox-kernel-6.14.11-1-pve - Proxmox Kernel Image
-proxmox-kernel-6.14.11-2-pve - Proxmox Kernel Image
-proxmox-kernel-6.14.11-3-pve - Proxmox Kernel Image
-proxmox-kernel-6.14.11-4-pve - Proxmox Kernel Image
-proxmox-kernel-6.14.11-5-pve - Proxmox Kernel Image
-proxmox-kernel-6.14.11-6-pve - Proxmox Kernel Image
-proxmox-kernel-6.14.11-7-pve - Proxmox Kernel Image
-proxmox-kernel-6.14.11-8-pve - Proxmox Kernel Image
-proxmox-kernel-6.14.11-9-pve - Proxmox Kernel Image
-proxmox-kernel-6.14.4-1+deb13u1-pve - Proxmox Kernel Image
-proxmox-kernel-6.14.5-1-pve - Proxmox Kernel Image
-proxmox-kernel-6.14.6-1-pve - Proxmox Kernel Image
-proxmox-kernel-6.14.8-1-pve - Proxmox Kernel Image
-proxmox-kernel-6.14.8-2-pve - Proxmox Kernel Image
-proxmox-kernel-6.14 - Latest Proxmox Kernel Image
-proxmox-kernel-6.17.1-1-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.13-1-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.13-10-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.13-11-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.13-12-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.13-13-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.13-2-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.13-3-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.13-4-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.13-5-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.13-6-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.13-7-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.13-8-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.13-9-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.2-1-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.2-2-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.4-1-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.4-2-pve - Proxmox Kernel Image
-proxmox-kernel-6.17.9-1-pve - Proxmox Kernel Image
-proxmox-kernel-6.17 - Latest Proxmox Kernel Image
-proxmox-kernel-7.0.0-1-pve - Proxmox Kernel Image
-proxmox-kernel-7.0.0-1-rc6-pve - Proxmox Kernel Image
-proxmox-kernel-7.0.0-1-rc7-pve - Proxmox Kernel Image
-proxmox-kernel-7.0.0-2-pve - Proxmox Kernel Image
-proxmox-kernel-7.0.0-3-pve - Proxmox Kernel Image
-proxmox-kernel-7.0.12-1-pve - Proxmox Kernel Image
-proxmox-kernel-7.0.2-1-pve - Proxmox Kernel Image
-proxmox-kernel-7.0.2-2-pve - Proxmox Kernel Image
-proxmox-kernel-7.0.2-3-pve - Proxmox Kernel Image
-proxmox-kernel-7.0.2-4-pve - Proxmox Kernel Image
-proxmox-kernel-7.0.2-5-pve - Proxmox Kernel Image
-proxmox-kernel-7.0.2-6-pve - Proxmox Kernel Image
-proxmox-kernel-7.0.2-7-pve - Proxmox Kernel Image
-proxmox-kernel-7.0.6-1-pve - Proxmox Kernel Image
-proxmox-kernel-7.0.6-2-pve - Proxmox Kernel Image
-proxmox-kernel-7.0 - Latest Proxmox Kernel Image
-proxmox-kernel-helper - Function for various kernel maintenance tasks.
-root@gpusrv02:/tmp#
+PS C:\Users\bakhromovshb> ssh root@172.31.230.3
+Linux gpusrv02.local 6.14.11-9-pve #1 SMP PREEMPT_DYNAMIC PMX 6.14.11-9 (2026-05-15T09:33Z) x86_64
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+Last login: Fri Jun 26 15:05:35 2026 from 192.168.41.32
+root@gpusrv02:~# uname -r
+6.14.11-9-pve
+root@gpusrv02:~# cat > /etc/apt/sources.list << 'EOF'
+deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian trixie-updates main contrib non-free non-free-firmware
+deb http://security.debian.org/debian-security trixie-security main contrib non-free non-free-firmware
+EOF
+root@gpusrv02:~# apt update
+Get:1 http://security.debian.org/debian-security trixie-security InRelease [43.4 kB]
+Hit:2 http://download.proxmox.com/debian/pve trixie InRelease
+Get:3 http://deb.debian.org/debian trixie InRelease [140 kB]
+Get:4 http://security.debian.org/debian-security trixie-security/main amd64 Packages [223 kB]
+Get:5 http://deb.debian.org/debian trixie-updates InRelease [47.3 kB]
+Get:6 http://deb.debian.org/debian trixie/main amd64 Packages [9,671 kB]
+Get:7 http://security.debian.org/debian-security trixie-security/main Translation-en [134 kB]
+Get:8 http://security.debian.org/debian-security trixie-security/non-free-firmware amd64 Packages [544 B]
+Get:9 http://security.debian.org/debian-security trixie-security/non-free-firmware Translation-en [352 B]
+Get:10 http://deb.debian.org/debian trixie/main Translation-en [6,485 kB]
+Get:11 http://deb.debian.org/debian trixie/contrib amd64 Packages [53.8 kB]
+Get:12 http://deb.debian.org/debian trixie/contrib Translation-en [49.6 kB]
+Get:13 http://deb.debian.org/debian trixie/non-free amd64 Packages [100 kB]
+Get:14 http://deb.debian.org/debian trixie/non-free Translation-en [67.1 kB]
+Get:15 http://deb.debian.org/debian trixie/non-free-firmware amd64 Packages [6,884 B]
+Get:16 http://deb.debian.org/debian trixie/non-free-firmware Translation-en [4,704 B]
+Get:17 http://deb.debian.org/debian trixie-updates/main amd64 Packages [5,412 B]
+Get:18 http://deb.debian.org/debian trixie-updates/main Translation-en [4,096 B]
+Fetched 17.0 MB in 2s (7,460 kB/s)
+40 packages can be upgraded. Run 'apt list --upgradable' to see them.
+root@gpusrv02:~# apt install -y pve-headers-$(uname -r) build-essential dkms
+Note, selecting 'proxmox-headers-6.14.11-9-pve' instead of 'pve-headers-6.14.11-9-pve'
+proxmox-headers-6.14.11-9-pve is already the newest version (6.14.11-9).
+build-essential is already the newest version (12.12).
+dkms is already the newest version (3.2.2-1~deb13u1).
+Summary:
+  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 40
+root@gpusrv02:~# echo "blacklist nouveau" > /etc/modprobe.d/blacklist-nouveau.conf
+echo "options nouveau modeset=0" >> /etc/modprobe.d/blacklist-nouveau.conf
+update-initramfs -u
+update-initramfs: Generating /boot/initrd.img-7.0.6-2-pve
+Running hook script 'zz-proxmox-boot'..
+Re-executing '/etc/kernel/postinst.d/zz-proxmox-boot' in new private mount namespace..
+No /etc/kernel/proxmox-boot-uuids found, skipping ESP sync.
+root@gpusrv02:~# echo $DRIVER_VER
+
+root@gpusrv02:~# apt-cache search nvidia | grep -iE "(driver|dkms|kernel)" | sort
+bbswitch-dkms - Interface for toggling the power on NVIDIA Optimus video cards (dkms)
+bumblebee-nvidia - NVIDIA Optimus support using the proprietary NVIDIA driver
+hipcc - C++ Runtime API and Kernel Language for AMD and NVIDIA GPUs
+libcuda1 - NVIDIA CUDA Driver Library
+libnvidia-tesla-535-cuda1 - NVIDIA CUDA Driver Library (Tesla 535 version)
+mir-graphics-drivers-nvidia - Mir Display Server - Nvidia driver metapackage
+mstflint-dkms - kernel module for Nvidia (formly Mellanox) firmware buring tool
+nvidia-driver-bin - NVIDIA driver support binaries
+nvidia-driver-full - NVIDIA metapackage (all components)
+nvidia-driver-libs - NVIDIA metapackage (OpenGL/GLX/EGL/GLES libraries)
+nvidia-driver - NVIDIA metapackage
+nvidia-egl-common - NVIDIA binary EGL driver - common files
+nvidia-egl-icd - NVIDIA EGL installable client driver (ICD)
+nvidia-fs-dkms - NVIDIA file-system - nvidia-fs.ko kernel driver
+nvidia-installer-cleanup - cleanup after driver installation with the nvidia-installer
+nvidia-kernel-common - NVIDIA binary kernel module support files
+nvidia-kernel-dkms - NVIDIA binary kernel module DKMS source
+nvidia-kernel-source - NVIDIA binary kernel module source
+nvidia-kernel-support - NVIDIA binary kernel module support files
+nvidia-legacy-check - check for NVIDIA GPUs requiring a legacy driver
+nvidia-modprobe - utility to load NVIDIA kernel modules and create device nodes
+nvidia-opencl-common - NVIDIA OpenCL driver - common files
+nvidia-opencl-icd - NVIDIA OpenCL installable client driver (ICD)
+nvidia-open-kernel-dkms - NVIDIA open kernel module DKMS source
+nvidia-open-kernel-source - NVIDIA open kernel module source
+nvidia-open-kernel-support - NVIDIA open kernel module support files
+nvidia-persistenced - daemon to maintain persistent software state in the NVIDIA driver
+nvidia-settings-tesla-535 - tool for configuring the NVIDIA graphics driver (Tesla 535 version)
+nvidia-settings - tool for configuring the NVIDIA graphics driver
+nvidia-support - NVIDIA binary graphics driver support files
+nvidia-suspend-common - NVIDIA driver - systemd power management scripts
+nvidia-tesla-535-driver-bin - NVIDIA driver support binaries (Tesla 535 version)
+nvidia-tesla-535-driver-full - NVIDIA metapackage (all components) (Tesla 535 version)
+nvidia-tesla-535-driver-libs - NVIDIA metapackage (OpenGL/GLX/EGL/GLES libraries) (Tesla 535 version)
+nvidia-tesla-535-driver - NVIDIA metapackage (Tesla 535 version)
+nvidia-tesla-535-egl-icd - NVIDIA EGL installable client driver (ICD)
+nvidia-tesla-535-kernel-dkms - NVIDIA binary kernel module DKMS source (Tesla 535 version)
+nvidia-tesla-535-kernel-source - NVIDIA binary kernel module source (Tesla 535 version)
+nvidia-tesla-535-kernel-support - NVIDIA binary kernel module support files (Tesla 535 version)
+nvidia-tesla-535-opencl-icd - NVIDIA OpenCL installable client driver (ICD) (Tesla 535 version)
+nvidia-tesla-535-vdpau-driver - Video Decode and Presentation API for Unix - NVIDIA driver (Tesla 535)
+nvidia-tesla-535-vulkan-icd - NVIDIA Vulkan installable client driver (ICD) (Tesla 535 version)
+nvidia-vaapi-driver - VA-API implementation that uses NVDEC as a backend
+nvidia-vdpau-driver - Video Decode and Presentation API for Unix - NVIDIA driver
+nvidia-vulkan-common - NVIDIA Vulkan driver - common files
+nvidia-vulkan-icd - NVIDIA Vulkan installable client driver (ICD)
+nvidia-xconfig - deprecated X configuration tool for non-free NVIDIA drivers
+primus-nvidia - NVIDIA Primus support using the proprietary NVIDIA driver
+vdpau-driver-all - Video Decode and Presentation API for Unix (driver metapackage)
+xserver-xorg-video-nouveau - X.Org X server -- Nouveau display driver
+xserver-xorg-video-nvidia - NVIDIA binary Xorg driver
+xserver-xorg-video-nvidia-tesla-535 - NVIDIA binary Xorg driver (Tesla 535 version)
+root@gpusrv02:~#
