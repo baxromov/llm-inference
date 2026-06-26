@@ -42,6 +42,7 @@ services:
     image: ollama/ollama:0.6.5
     container_name: ollama
     restart: unless-stopped
+    runtime: nvidia
     networks:
       - internal
     volumes:
@@ -96,6 +97,7 @@ services:
     image: michaelf34/infinity:0.0.72
     container_name: infinity
     restart: unless-stopped
+    runtime: nvidia
     networks:
       - internal
     volumes:
