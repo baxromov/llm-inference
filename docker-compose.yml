@@ -100,10 +100,10 @@ services:
       - internal
     volumes:
       - ./infinity/models:/models:ro
-      - infinity_cache:/models/.infinity_cache
+      - infinity_cache:/infinity_cache
       - ./infinity/entrypoint.sh:/entrypoint.sh:ro
     environment:
-      - HF_HOME=/models
+      - HF_HOME=/infinity_cache
       - HF_HUB_OFFLINE=1
       - TRANSFORMERS_OFFLINE=1
       - CUDA_VISIBLE_DEVICES=1
