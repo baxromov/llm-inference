@@ -1,7 +1,23 @@
 # Fix: Move Docker to NVMe (no space left on device)
 
 **Muammo:** `/dev/sda2` root disk 46GB, 93% to'la. Docker uchun joy yo'q.  
-**Yechim:** Bo'sh `nvme0n1` (2.9TB) diskni ishlatish.
+**Yechim:** Bo'sh `nvme0n1` (2.9TB) diskni ishlatish — symlink orqali.
+
+> **Eslatma:** Oldingi versiyada `containerd config.toml` o'zgartirish bor edi —
+> bu xavfli va keraksiz. Symlink yondashuvi soddaroq va ishonchli.
+
+---
+
+## Nima bo'lyapti?
+
+```
+/var/lib/containerd  = 11 GB  ← Docker image-lar bu yerda (system containerd)
+/var/lib/docker      = 240 KB ← deyarli bo'sh
+```
+
+Docker 29+ system containerd-ni image store sifatida ishlatadi.
+Faqat `daemon.json data-root` o'zgartirish yetarli emas — image-lar hali ham
+`/var/lib/containerd`-ga yoziladi. Symlink esa barcha yo'llarni avtomatik ko'chiradi.
 
 ---
 
@@ -12,34 +28,34 @@
 mkfs.ext4 /dev/nvme0n1
 mkdir -p /data
 mount /dev/nvme0n1 /data
-echo "/dev/nvme0n1 /data ext4 defaults 0 2" >> /etc/fstab
+
+# UUID bilan fstab (device nomi reboot-da o'zgarishi mumkin)
+UUID=$(blkid -s UUID -o value /dev/nvme0n1)
+echo "UUID=$UUID /data ext4 defaults 0 2" >> /etc/fstab
 
 # 2. Docker va containerd-ni to'xtatish
 systemctl stop docker containerd
 
-# 3. Mavjud data-ni ko'chirish
+# 3. Data-ni NVMe-ga ko'chirish
 mv /var/lib/containerd /data/containerd
 mv /var/lib/docker /data/docker
 
-# 4. Docker-ga yangi yo'lni ko'rsatish
-mkdir -p /etc/docker
-cat > /etc/docker/daemon.json << 'EOF'
-{
-  "data-root": "/data/docker"
-}
-EOF
+# 4. Symlink qo'yish (config o'zgartirish shart emas)
+ln -s /data/containerd /var/lib/containerd
+ln -s /data/docker /var/lib/docker
 
-# 5. Containerd-ga yangi yo'lni ko'rsatish
-mkdir -p /etc/containerd
-containerd config default > /etc/containerd/config.toml
-sed -i 's|/var/lib/containerd|/data/containerd|g' /etc/containerd/config.toml
-
-# 6. Qayta ishga tushirish
+# 5. Qayta ishga tushirish
 systemctl start containerd docker
 
-# 7. Tekshirish
+# 6. Tekshirish
 docker info | grep "Docker Root Dir"
-df -h /data
+ls -la /var/lib/containerd   # → /data/containerd ko'rinishi kerak
+ls -la /var/lib/docker       # → /data/docker ko'rinishi kerak
+df -h /data                  # 2.9TB bo'sh
+
+# 7. Test: kichik image tortib ko'rish
+docker pull hello-world && docker run --rm hello-world
+# "Hello from Docker!" chiqishi kerak
 
 # 8. Eski to'liq docker cache-ni tozalash
 docker system prune -af
@@ -56,5 +72,5 @@ HF_AUTO_DOWNLOAD=1 ./deploy.sh
 
 | Disk | Hajm | Maqsad |
 |---|---|---|
-| `/dev/sda2` | 46 GB | OS, kod, config |
-| `/dev/nvme0n1` → `/data` | 2.9 TB | Docker images, volumes, models |
+| `/dev/sda2` → `/` | 46 GB | OS, kod, config, HF models |
+| `/dev/nvme0n1` → `/data` | 2.9 TB | Docker images, volumes, Ollama models |
