@@ -1,3 +1,4 @@
+dcgm-exporter  | time="2026-06-26T13:16:56Z" level=info msg="TLS is disabled." address="[::]:9400" http2=false
 infinity       | ╭───────────────────── Traceback (most recent call last) ──────────────────────╮
 infinity       | │ /app/infinity_emb/infinity_server.py:923 in v2                               │
 infinity       | │                                                                              │
@@ -27,7 +28,7 @@ infinity       | │ │            log_level = <UVICORN_LOG_LEVELS.info: 'info'
 infinity       | │ │             model_id = ['michaelfeil/bge-small-en-v1.5']                 │ │
 infinity       | │ │         model_warmup = [True]                                            │ │
 infinity       | │ │               padder = <infinity_emb.infinity_server.AutoPadding object  │ │
-infinity       | │ │                        at 0x72b65b2efdc0>                                │ │
+infinity       | │ │                        at 0x7f52c0fe99c0>                                │ │
 infinity       | │ │      permissive_cors = False                                             │ │
 infinity       | │ │       pooling_method = [<PoolingMethod.auto: 'auto'>]                    │ │
 infinity       | │ │                 port = 7997                                              │ │
@@ -71,7 +72,7 @@ infinity       | │ │             │   'lengths_via_tokenize': False,       
 infinity       | │ │             │   ... +5                                                   │ │
 infinity       | │ │             }                                                            │ │
 infinity       | │ │      self = <infinity_emb.infinity_server.AutoPadding object at          │ │
-infinity       | │ │             0x72b65b2efdc0>                                              │ │
+infinity       | │ │             0x7f52c0fe99c0>                                              │ │
 infinity       | │ │     value = ['/models/BAAI/bge-m3', '/models/BAAI/bge-reranker-v2-m3']   │ │
 infinity       | │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 infinity       | │                                                                              │
@@ -88,7 +89,7 @@ infinity       | │                                                            
 infinity       | │ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
 infinity       | │ │ iteration = 0                                                            │ │
 infinity       | │ │      self = <infinity_emb.infinity_server.AutoPadding object at          │ │
-infinity       | │ │             0x72b65b2efdc0>                                              │ │
+infinity       | │ │             0x7f52c0fe99c0>                                              │ │
 infinity       | │ │         x = ['/models/BAAI/bge-m3', '/models/BAAI/bge-reranker-v2-m3']   │ │
 infinity       | │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 infinity       | ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -124,7 +125,7 @@ infinity       | │ │            log_level = <UVICORN_LOG_LEVELS.info: 'info'
 infinity       | │ │             model_id = ['michaelfeil/bge-small-en-v1.5']                 │ │
 infinity       | │ │         model_warmup = [True]                                            │ │
 infinity       | │ │               padder = <infinity_emb.infinity_server.AutoPadding object  │ │
-infinity       | │ │                        at 0x7e57ff0e7dc0>                                │ │
+infinity       | │ │                        at 0x790289ee7dc0>                                │ │
 infinity       | │ │      permissive_cors = False                                             │ │
 infinity       | │ │       pooling_method = [<PoolingMethod.auto: 'auto'>]                    │ │
 infinity       | │ │                 port = 7997                                              │ │
@@ -149,45 +150,4 @@ infinity       | │   643 │   │   │   for key, value in self.kwargs.items
 infinity       | │ ❱ 644 │   │   │   │   kwargs[key] = self._resolve(value, iteration)          │
 infinity       | │   645 │   │   │   yield kwargs                                               │
 infinity       | │   646                                                                        │
-infinity       | │   647                                                                        │
-infinity       | │                                                                              │
-infinity       | │ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
-infinity       | │ │ iteration = 0                                                            │ │
-infinity       | │ │       key = 'served_model_name'                                          │ │
-infinity       | │ │    kwargs = {                                                            │ │
-infinity       | │ │             │   'model_name_or_path': 'michaelfeil/bge-small-en-v1.5',   │ │
-infinity       | │ │             │   'batch_size': 64,                                        │ │
-infinity       | │ │             │   'revision': '',                                          │ │
-infinity       | │ │             │   'trust_remote_code': True,                               │ │
-infinity       | │ │             │   'engine': <InferenceEngine.torch: 'torch'>,              │ │
-infinity       | │ │             │   'model_warmup': True,                                    │ │
-infinity       | │ │             │   'vector_disk_cache_path': False,                         │ │
-infinity       | │ │             │   'device': <Device.cuda: 'cuda'>,                         │ │
-infinity       | │ │             │   'device_id': DeviceID(),                                 │ │
-infinity       | │ │             │   'lengths_via_tokenize': False,                           │ │
-infinity       | │ │             │   ... +5                                                   │ │
-infinity       | │ │             }                                                            │ │
-infinity       | │ │      self = <infinity_emb.infinity_server.AutoPadding object at          │ │
-infinity       | │ │             0x7e57ff0e7dc0>                                              │ │
-infinity       | │ │     value = ['/models/BAAI/bge-m3', '/models/BAAI/bge-reranker-v2-m3']   │ │
-infinity       | │ ╰──────────────────────────────────────────────────────────────────────────╯ │
-infinity       | │                                                                              │
-infinity       | │ /app/infinity_emb/infinity_server.py:637 in _resolve                         │
-infinity       | │                                                                              │
-infinity       | │   634 │   │   elif len(x) == self.length:                                    │
-infinity       | │   635 │   │   │   return x[iteration]                                        │
-infinity       | │   636 │   │   else:                                                          │
-infinity       | │ ❱ 637 │   │   │   raise ValueError(f"Expected length {self.length} but got { │
-infinity       | │   638 │                                                                      │
-infinity       | │   639 │   def __iter__(self):                                                │
-infinity       | │   640 │   │   """iterate over kwargs and pad them to length of self.length"" │
-infinity       | │                                                                              │
-infinity       | │ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
-infinity       | │ │ iteration = 0                                                            │ │
-infinity       | │ │      self = <infinity_emb.infinity_server.AutoPadding object at          │ │
-infinity       | │ │             0x7e57ff0e7dc0>                                              │ │
-infinity       | │ │         x = ['/models/BAAI/bge-m3', '/models/BAAI/bge-reranker-v2-m3']   │ │
-infinity       | │ ╰──────────────────────────────────────────────────────────────────────────╯ │
-infinity       | ╰──────────────────────────────────────────────────────────────────────────────╯
-infinity       | ValueError: Expected length 1 but got 2
-infinity exited with code 1 (restarting)
+infinity       | │   647
