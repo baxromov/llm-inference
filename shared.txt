@@ -6,7 +6,7 @@ root@gpusrv02:/opt/llm-inference# HF_AUTO_DOWNLOAD=1 ./deploy.sh
 
 ▶ Checking prerequisites
 [OK]  Docker 29.6.0
-.[OK]  Python 3.13.5
+[OK]  Python 3.13.5
 [OK]  PyYAML available
 [OK]  Found 2 GPU(s):
        0, NVIDIA A100-SXM4-80GB, 81920 MiB
@@ -34,32 +34,6 @@ Done. Apply changes with:
          • BAAI/bge-m3
          • BAAI/bge-reranker-v2-m3
 /usr/bin/python3: No module named pip
-Traceback (most recent call last):
-  File "<stdin>", line 25, in <module>
-  File "/usr/lib/python3.13/subprocess.py", line 414, in check_call
-    retcode = call(*popenargs, **kwargs)
-  File "/usr/lib/python3.13/subprocess.py", line 395, in call
-    with Popen(*popenargs, **kwargs) as p:
-         ~~~~~^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.13/subprocess.py", line 1039, in __init__
-    self._execute_child(args, executable, preexec_fn, close_fds,
-    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                        pass_fds, cwd, env,
-                        ^^^^^^^^^^^^^^^^^^^
-    ...<5 lines>...
-                        gid, gids, uid, umask,
-                        ^^^^^^^^^^^^^^^^^^^^^^
-                        start_new_session, process_group)
-                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.13/subprocess.py", line 1972, in _execute_child
-    raise child_exception_type(errno_num, err_msg, err_filename)
-FileNotFoundError: [Errno 2] No such file or directory: 'huggingface-cli'
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "<stdin>", line 27, in <module>
-  File "/usr/lib/python3.13/subprocess.py", line 419, in check_call
-    raise CalledProcessError(retcode, cmd)
-subprocess.CalledProcessError: Command '['/usr/bin/python3', '-m', 'pip', 'install', 'huggingface-hub', '-q']' returned non-zero exit status 1.
-root@gpusrv02:/opt/llm-inference# .
+  [ERR] Cannot install huggingface-hub: pip not available.
+        Fix: apt install python3-pip && pip3 install huggingface-hub
+root@gpusrv02:/opt/llm-inference#
