@@ -1,9 +1,13 @@
 # GPU Server Setup Guide — `gpusrv02` (2× A100 SXM4 80GB)
 
 **Server:** `gpusrv02` · IP: `172.31.230.3`  
-**OS:** Debian GNU/Linux (Proxmox VE 7 kernel)  
+**OS:** Debian GNU/Linux **Trixie (13)** — Proxmox VE **9.2.3** (`pveversion`)  
+**Kernel:** `7.0.6-2-pve` (custom Proxmox kernel)  
 **Hardware:** 2× NVIDIA A100 SXM4 80GB via NVSwitch (NVLink)  
 **Goal:** Fresh server → full LLM inference stack running
+
+> **Important:** This is PVE 9 / Debian Trixie — do NOT add Debian Bullseye (11) or Bookworm (12) repos.
+> Mixing versions causes libglvnd dependency conflicts. Use Trixie repos + NVIDIA's own CUDA repo.
 
 ---
 
@@ -22,6 +26,7 @@
 11. [Verify Everything is Working](#11-verify-everything-is-working)
 12. [Firewall / Network](#12-firewall--network)
 13. [Troubleshooting](#13-troubleshooting)
+14. [Going Fully Offline (On-Premise)](#14-going-fully-offline-on-premise-no-internet)
 
 ---
 
@@ -46,37 +51,55 @@ lspci | grep -i nvidia
 
 ## 2. Install NVIDIA Drivers
 
-> **Note:** This is a Proxmox VE host. You must use `pve-headers` (not generic linux-headers) and add the `non-free` and `non-free-firmware` apt repos.
+> **PVE 9 / Debian Trixie specific:** Do NOT use Debian Bullseye or Bookworm repos — they cause
+> `libglvnd0` version conflicts. Use NVIDIA's own CUDA network repo which carries headless drivers
+> without any X11 dependency.
 
-### 2a. Add non-free repos
+### 2a. Fix sources.list — use Trixie repos only
 
 ```bash
-# Edit /etc/apt/sources.list
+# Replace anything that was added before with the correct Trixie repos
 cat > /etc/apt/sources.list << 'EOF'
-deb http://ftp.debian.org/debian bullseye main contrib non-free non-free-firmware
-deb http://ftp.debian.org/debian bullseye-updates main contrib non-free non-free-firmware
-deb http://security.debian.org bullseye-security main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian trixie-updates main contrib non-free non-free-firmware
+deb http://security.debian.org/debian-security trixie-security main contrib non-free non-free-firmware
 EOF
 
-# Also keep Proxmox repos (don't overwrite /etc/apt/sources.list.d/)
+# Proxmox repo stays untouched in /etc/apt/sources.list.d/pve*.list
 apt update
 ```
 
-### 2b. Install kernel headers for PVE kernel
+### 2b. Install PVE kernel headers
 
 ```bash
+# 'pve-headers-*' is an alias — apt resolves it to 'proxmox-headers-*' automatically
 apt install -y pve-headers-$(uname -r)
 ```
 
-### 2c. Install NVIDIA driver
+### 2c. Add NVIDIA CUDA network repo (Debian 12 packages work on Trixie)
 
 ```bash
-apt install -y nvidia-driver firmware-misc-nonfree
+cd /tmp
+wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb
+dpkg -i cuda-keyring_1.1-1_all.deb
+apt update
 ```
 
-> This takes 3–5 minutes — it compiles the kernel module.
+### 2d. Install NVIDIA drivers via cuda-drivers (headless — no X11)
 
-### 2d. Disable Nouveau (open-source GPU driver that conflicts with NVIDIA)
+```bash
+# cuda-drivers installs: kernel module (via DKMS) + nvidia-smi + userspace libs
+# No X11 / xserver packages → no libglvnd conflict
+apt install -y cuda-drivers
+```
+
+> This compiles the NVIDIA kernel module against the PVE headers via DKMS.
+> Takes 5–10 minutes. Watch progress:
+> ```bash
+> dkms status   # should show: nvidia/xxx: added
+> ```
+
+### 2e. Disable Nouveau
 
 ```bash
 echo "blacklist nouveau" > /etc/modprobe.d/blacklist-nouveau.conf
@@ -84,13 +107,13 @@ echo "options nouveau modeset=0" >> /etc/modprobe.d/blacklist-nouveau.conf
 update-initramfs -u
 ```
 
-### 2e. Reboot
+### 2f. Reboot
 
 ```bash
 reboot
 ```
 
-### 2f. Verify drivers loaded
+### 2g. Verify drivers loaded
 
 ```bash
 nvidia-smi
@@ -99,7 +122,7 @@ nvidia-smi
 Expected output:
 ```
 +-----------------------------------------------------------------------------+
-| NVIDIA-SMI 525.xx   Driver Version: 525.xx   CUDA Version: 12.x            |
+| NVIDIA-SMI 570.xx   Driver Version: 570.xx   CUDA Version: 12.x            |
 |-------------------------------+----------------------+----------------------+
 | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC|
 |   0  A100 SXM4 80GB Off      | 00000000:0B:00.0 Off |                  Off |
@@ -111,16 +134,11 @@ Expected output:
 
 ## 3. Install CUDA Toolkit
 
-Docker containers carry their own CUDA libraries, so you only need the host driver (already installed above). However, install the CUDA toolkit for any host-level tools or direct testing:
+`cuda-drivers` (step 2) already installs the NVIDIA driver. Now add the full CUDA toolkit for host-level tooling:
 
 ```bash
-# Add NVIDIA CUDA repo for Debian 11
-wget https://developer.download.nvidia.com/compute/cuda/repos/debian11/x86_64/cuda-keyring_1.1-1_all.deb
-dpkg -i cuda-keyring_1.1-1_all.deb
-apt update
-
-# Install CUDA 12.x (just toolkit, driver already installed)
-apt install -y cuda-toolkit-12-3
+# CUDA toolkit only — driver already installed via cuda-drivers
+apt install -y cuda-toolkit-12-6
 ```
 
 Add to PATH:
@@ -135,7 +153,11 @@ Verify:
 
 ```bash
 nvcc --version   # CUDA compiler version
+nvidia-smi       # driver + CUDA version confirmed
 ```
+
+> Docker containers bring their own CUDA libraries — the host toolkit is only needed for
+> host-level debugging tools like `nvtop`, `cuda-samples`, etc.
 
 ---
 
@@ -429,14 +451,36 @@ netfilter-persistent save
 
 ## 13. Troubleshooting
 
+### `nvidia-driver` install fails with `libglvnd0` conflict
+
+This happens when Debian Bullseye (11) repos are mixed into a Trixie (13) system.
+Fix: switch to Trixie repos and use NVIDIA's own CUDA repo:
+
+```bash
+cat > /etc/apt/sources.list << 'EOF'
+deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian trixie-updates main contrib non-free non-free-firmware
+deb http://security.debian.org/debian-security trixie-security main contrib non-free non-free-firmware
+EOF
+apt update
+
+wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb
+dpkg -i cuda-keyring_1.1-1_all.deb
+apt update
+apt install -y cuda-drivers
+```
+
 ### `nvidia-smi: command not found` after reboot
 
 ```bash
+# Check if DKMS module compiled successfully
+dkms status
+
 # Check if module is loaded
 lsmod | grep nvidia
 
 # If not loaded, reinstall
-apt install --reinstall nvidia-driver
+apt install --reinstall cuda-drivers
 reboot
 ```
 
@@ -508,6 +552,122 @@ docker compose down -v      # stops all containers AND deletes volumes (data los
 docker system prune -af     # removes all images and build cache
 ./deploy.sh                 # fresh deploy
 ```
+
+---
+
+## 14. Going Fully Offline (On-Premise, No Internet)
+
+After everything is installed and working with internet, the server can be cut off completely.
+All services run from local Docker images and local model files — nothing phones home.
+
+### Before cutting the internet — pre-pull everything:
+
+#### 14a. Pull all Docker images
+
+```bash
+cd /opt/llm-inference
+
+# Pull every image referenced in docker-compose.yml
+docker compose pull
+
+# Verify all images are cached locally
+docker images
+```
+
+#### 14b. Pull the Ollama chat model
+
+```bash
+# Start Ollama and pull the model manually
+docker compose up -d ollama
+docker compose logs -f ollama-init   # wait for it to finish pulling
+
+# Or pull manually:
+docker exec ollama ollama pull qwen3.6:27b
+```
+
+#### 14c. Download HuggingFace embedding + reranker models
+
+```bash
+pip3 install huggingface-hub
+
+HF_AUTO_DOWNLOAD=1 ./deploy.sh
+
+# Or manually:
+huggingface-cli download BAAI/bge-m3 --local-dir infinity/models/BAAI/bge-m3
+huggingface-cli download BAAI/bge-reranker-v2-m3 --local-dir infinity/models/BAAI/bge-reranker-v2-m3
+```
+
+#### 14d. Save Docker images to disk (optional, for disaster recovery)
+
+```bash
+mkdir -p /opt/docker-images
+
+docker save ollama/ollama:0.6.5           | gzip > /opt/docker-images/ollama.tar.gz
+docker save michaelf34/infinity:0.0.72    | gzip > /opt/docker-images/infinity.tar.gz
+docker save ghcr.io/berriai/litellm:main-v1.57.0-stable | gzip > /opt/docker-images/litellm.tar.gz
+docker save langfuse/langfuse:3.35.0      | gzip > /opt/docker-images/langfuse-web.tar.gz
+docker save langfuse/langfuse-worker:3.35.0 | gzip > /opt/docker-images/langfuse-worker.tar.gz
+docker save postgres:16-alpine            | gzip > /opt/docker-images/postgres.tar.gz
+docker save clickhouse/clickhouse-server:24.8-alpine | gzip > /opt/docker-images/clickhouse.tar.gz
+docker save redis:7.2-alpine              | gzip > /opt/docker-images/redis.tar.gz
+docker save minio/minio:RELEASE.2024-11-07T00-52-20Z | gzip > /opt/docker-images/minio.tar.gz
+docker save prom/prometheus:v2.53.0       | gzip > /opt/docker-images/prometheus.tar.gz
+docker save grafana/grafana:11.0.0        | gzip > /opt/docker-images/grafana.tar.gz
+docker save nvcr.io/nvidia/k8s/dcgm-exporter:3.3.6-3.4.2-ubuntu22.04 | gzip > /opt/docker-images/dcgm.tar.gz
+
+echo "All images saved to /opt/docker-images/"
+ls -lh /opt/docker-images/
+```
+
+To restore from saved images (after full reset or on a new server):
+```bash
+for f in /opt/docker-images/*.tar.gz; do
+  echo "Loading $f..."
+  docker load < "$f"
+done
+```
+
+#### 14e. Disable outbound internet (verify stack still works)
+
+```bash
+# Test: block outbound, ensure everything still runs
+iptables -A OUTPUT -m state --state NEW -j DROP
+
+# Run health check
+./manage.sh doctor
+
+# Test API
+curl http://localhost:4000/v1/chat/completions \
+  -H "Authorization: Bearer $(grep LITELLM_MASTER_KEY .env | cut -d= -f2)" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "qwen3.6-27b", "messages": [{"role": "user", "content": "hello"}], "max_tokens": 20}'
+
+# If everything works, the DROP rule is fine to keep permanently
+# To remove the test rule:
+iptables -D OUTPUT -m state --state NEW -j DROP
+```
+
+### What works offline:
+
+| Component | Offline-safe? | Notes |
+|---|---|---|
+| Ollama (LLM) | Yes | Model cached in Docker volume |
+| Infinity (embeddings) | Yes | Models in `infinity/models/` on disk |
+| LiteLLM API | Yes | No external calls |
+| Langfuse | Yes | Fully self-hosted |
+| Grafana / Prometheus | Yes | No telemetry (disabled in config) |
+| DCGM Exporter | Yes | Host GPU only |
+| Docker images | Yes | Pre-pulled and cached |
+
+### What requires internet only once (during setup):
+
+- NVIDIA driver install (`apt install cuda-drivers`)
+- Docker install
+- `docker compose pull` (image downloads)
+- `huggingface-cli download` (model downloads)
+- `pip3 install huggingface-hub` (one-time tool)
+
+Once installed, **zero internet needed** for normal operation.
 
 ---
 
