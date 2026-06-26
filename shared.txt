@@ -1,118 +1,67 @@
-root@gpusrv02:~# hostname        # gpusrv02
-uname -r        # 7.0.6-2-pve  (Proxmox VE kernel)
-lspci | grep -i nvidia
-# expected:
-#   0b:00.0 3D controller: NVIDIA Corporation GA100 [A100 SXM4 80GB]
-#   48:00.0 3D controller: NVIDIA Corporation GA100 [A100 SXM4 80GB]
-gpusrv02.local
-7.0.6-2-pve
-0b:00.0 3D controller: NVIDIA Corporation GA100 [A100 SXM4 80GB] (rev a1)
-48:00.0 3D controller: NVIDIA Corporation GA100 [A100 SXM4 80GB] (rev a1)
-a9:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
-aa:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
-ab:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
-ac:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
-ad:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
-ae:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
-root@gpusrv02:~# # Edit /etc/apt/sources.list
+root@gpusrv02:~# # Replace anything that was added before with the correct Trixie repos
 cat > /etc/apt/sources.list << 'EOF'
-deb http://ftp.debian.org/debian bullseye main contrib non-free non-free-firmware
-deb http://ftp.debian.org/debian bullseye-updates main contrib non-free non-free-firmware
-deb http://security.debian.org bullseye-security main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian trixie-updates main contrib non-free non-free-firmware
+deb http://security.debian.org/debian-security trixie-security main contrib non-free non-free-firmware
 EOF
 
-# Also keep Proxmox repos (don't overwrite /etc/apt/sources.list.d/)
+# Proxmox repo stays untouched in /etc/apt/sources.list.d/pve*.list
 apt update
-Get:1 http://security.debian.org bullseye-security InRelease [27.2 kB]
-Get:2 http://ftp.debian.org/debian bullseye InRelease [75.1 kB]
-Hit:3 http://download.proxmox.com/debian/pve trixie InRelease
-Get:4 http://security.debian.org bullseye-security/main amd64 Packages [457 kB]
-Get:5 http://ftp.debian.org/debian bullseye-updates InRelease [44.0 kB]
-Get:6 http://ftp.debian.org/debian bullseye/main amd64 Packages [8,066 kB]
-Get:7 http://security.debian.org bullseye-security/main Translation-en [307 kB]
-Get:8 http://security.debian.org bullseye-security/contrib amd64 Packages [2,880 B]
-Get:9 http://security.debian.org bullseye-security/contrib Translation-en [2,512 B]
-Get:10 http://security.debian.org bullseye-security/non-free amd64 Packages [1,524 B]
-Get:11 http://security.debian.org bullseye-security/non-free Translation-en [1,416 B]
-Get:12 http://ftp.debian.org/debian bullseye/main Translation-en [6,235 kB]
-Get:13 http://ftp.debian.org/debian bullseye/contrib amd64 Packages [50.4 kB]
-Get:14 http://ftp.debian.org/debian bullseye/contrib Translation-en [46.9 kB]
-Get:15 http://ftp.debian.org/debian bullseye/non-free amd64 Packages [96.4 kB]
-Get:16 http://ftp.debian.org/debian bullseye/non-free Translation-en [92.5 kB]
-Get:17 http://ftp.debian.org/debian bullseye-updates/main amd64 Packages [18.8 kB]
-Get:18 http://ftp.debian.org/debian bullseye-updates/main Translation-en [10.5 kB]
-Fetched 15.5 MB in 10s (1,547 kB/s)
-23 packages can be upgraded. Run 'apt list --upgradable' to see them.
-Warning: Skipping acquire of configured file 'non-free-firmware/binary-amd64/Packages' as repository 'http://security.debian.org bullseye-security InRelease' doesn't have the component 'non-free-firmware' (component misspelt in sources.list?)
-Warning: Skipping acquire of configured file 'non-free-firmware/i18n/Translation-en' as repository 'http://security.debian.org bullseye-security InRelease' doesn't have the component 'non-free-firmware' (component misspelt in sources.list?)
-Warning: Skipping acquire of configured file 'non-free-firmware/i18n/Translation-en_US' as repository 'http://security.debian.org bullseye-security InRelease' doesn't have the component 'non-free-firmware' (component misspelt in sources.list?)
-Warning: Skipping acquire of configured file 'non-free-firmware/binary-amd64/Packages' as repository 'http://ftp.debian.org/debian bullseye InRelease' doesn't have the component 'non-free-firmware' (component misspelt in sources.list?)
-Warning: Skipping acquire of configured file 'non-free-firmware/i18n/Translation-en' as repository 'http://ftp.debian.org/debian bullseye InRelease' doesn't have the component 'non-free-firmware' (component misspelt in sources.list?)
-Warning: Skipping acquire of configured file 'non-free-firmware/i18n/Translation-en_US' as repository 'http://ftp.debian.org/debian bullseye InRelease' doesn't have the component 'non-free-firmware' (component misspelt in sources.list?)
-Warning: Skipping acquire of configured file 'non-free-firmware/binary-amd64/Packages' as repository 'http://ftp.debian.org/debian bullseye-updates InRelease' doesn't have the component 'non-free-firmware' (component misspelt in sources.list?)
-Warning: Skipping acquire of configured file 'non-free-firmware/i18n/Translation-en_US' as repository 'http://ftp.debian.org/debian bullseye-updates InRelease' doesn't have the component 'non-free-firmware' (component misspelt in sources.list?)
-Warning: Skipping acquire of configured file 'non-free-firmware/i18n/Translation-en' as repository 'http://ftp.debian.org/debian bullseye-updates InRelease' doesn't have the component 'non-free-firmware' (component misspelt in sources.list?)
-root@gpusrv02:~# cat > /etc/apt/sources.list << 'EOF'
-deb http://ftp.debian.org/debian bullseye main contrib non-free
-deb http://ftp.debian.org/debian bullseye-updates main contrib non-free
-deb http://security.debian.org bullseye-security main contrib non-free
-EOF
-root@gpusrv02:~# apt update
-Hit:1 http://ftp.debian.org/debian bullseye InRelease
-Hit:2 http://download.proxmox.com/debian/pve trixie InRelease
-Hit:3 http://ftp.debian.org/debian bullseye-updates InRelease
-Hit:4 http://security.debian.org bullseye-security InRelease
-23 packages can be upgraded. Run 'apt list --upgradable' to see them.
-root@gpusrv02:~# apt install -y pve-headers-$(uname -r)
+Hit:1 http://download.proxmox.com/debian/pve trixie InRelease
+Get:2 http://security.debian.org/debian-security trixie-security InRelease [43.4 kB]
+Get:3 http://deb.debian.org/debian trixie InRelease [140 kB]
+Get:4 http://security.debian.org/debian-security trixie-security/main amd64 Packages [223 kB]
+Get:5 http://deb.debian.org/debian trixie-updates InRelease [47.3 kB]
+Get:6 http://deb.debian.org/debian trixie/main amd64 Packages [9,671 kB]
+Get:7 http://security.debian.org/debian-security trixie-security/main Translation-en [134 kB]
+Get:8 http://security.debian.org/debian-security trixie-security/non-free-firmware amd64 Packages [544 B]
+Get:9 http://security.debian.org/debian-security trixie-security/non-free-firmware Translation-en [352 B]
+Get:10 http://deb.debian.org/debian trixie/main Translation-en [6,485 kB]
+Get:11 http://deb.debian.org/debian trixie/contrib amd64 Packages [53.8 kB]
+Get:12 http://deb.debian.org/debian trixie/contrib Translation-en [49.6 kB]
+Get:13 http://deb.debian.org/debian trixie/non-free amd64 Packages [100 kB]
+Get:14 http://deb.debian.org/debian trixie/non-free Translation-en [67.1 kB]
+Get:15 http://deb.debian.org/debian trixie/non-free-firmware amd64 Packages [6,884 B]
+Get:16 http://deb.debian.org/debian trixie/non-free-firmware Translation-en [4,704 B]
+Get:17 http://deb.debian.org/debian trixie-updates/main amd64 Packages [5,412 B]
+Get:18 http://deb.debian.org/debian trixie-updates/main Translation-en [4,096 B]
+Fetched 17.0 MB in 2s (7,799 kB/s)
+40 packages can be upgraded. Run 'apt list --upgradable' to see them.
+root@gpusrv02:~# # 'pve-headers-*' is an alias — apt resolves it to 'proxmox-headers-*' automatically
+apt install -y pve-headers-$(uname -r)
 Note, selecting 'proxmox-headers-7.0.6-2-pve' instead of 'pve-headers-7.0.6-2-pve'
-Installing:
-  proxmox-headers-7.0.6-2-pve
-
+proxmox-headers-7.0.6-2-pve is already the newest version (7.0.6-2).
 Summary:
-  Upgrading: 0, Installing: 1, Removing: 0, Not Upgrading: 23
-  Download size: 15.8 MB
-  Space needed: 110 MB / 24.5 GB available
+  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 40
+root@gpusrv02:~# cd /tmp
+wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb
+dpkg -i cuda-keyring_1.1-1_all.deb
+apt update
+--2026-06-26 14:54:07--  https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb
+Resolving developer.download.nvidia.com (developer.download.nvidia.com)... 95.101.116.86, 95.101.116.81
+Connecting to developer.download.nvidia.com (developer.download.nvidia.com)|95.101.116.86|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 4148 (4.1K) [application/x-deb]
+Saving to: ‘cuda-keyring_1.1-1_all.deb’
 
-Get:1 http://download.proxmox.com/debian/pve trixie/pve-no-subscription amd64 proxmox-headers-7.0.6-2-pve amd64 7.0.6-2 [15.8 MB]
-Fetched 15.8 MB in 2s (8,555 kB/s)
-Selecting previously unselected package proxmox-headers-7.0.6-2-pve.
-(Reading database ... 57260 files and directories currently installed.)
-Preparing to unpack .../proxmox-headers-7.0.6-2-pve_7.0.6-2_amd64.deb ...
-Unpacking proxmox-headers-7.0.6-2-pve (7.0.6-2) ...
-Setting up proxmox-headers-7.0.6-2-pve (7.0.6-2) ...
-root@gpusrv02:~# apt install -y nvidia-driver firmware-misc-nonfree
-Solving dependencies... Error!
-Some packages could not be installed. This may mean that you have
-requested an impossible situation or if you are using the unstable
-distribution that some required packages have not yet been created
-or been moved out of Incoming.
-The following information may help to resolve the situation:
+cuda-keyring_1.1-1_all.deb                           100%[===================================================================================================================>]   4.05K  --.-KB/s    in 0s
 
-Unsatisfied dependencies:
- libegl1 : Depends: libglvnd0 (= 1.3.2-1) but 1.7.0-1+b2 is to be installed
-           Depends: libegl-mesa0 but it is not going to be installed
- nvidia-driver : Depends: nvidia-kernel-dkms (= 470.256.02-2) but it is not installable or
-                          nvidia-kernel-470.256.02
-Error: Unable to correct problems, you have held broken packages.
-Error: The following information from --solver 3.0 may provide additional context:
-   Unable to satisfy dependencies. Reached two conflicting decisions:
-   1. xserver-xorg-video-nvidia:amd64 is selected for install because:
-      1. nvidia-driver:amd64=470.256.02-2 is selected for install
-      2. nvidia-driver:amd64 Depends xserver-xorg-video-nvidia (= 470.256.02-2)
-   2. xserver-xorg-video-nvidia:amd64 Depends xserver-xorg-core (< 2:21.99)
-      but none of the choices are installable:
-      - xserver-xorg-core:amd64 Depends libegl1
-        but none of the choices are installable:
-        - libegl1:amd64 Depends libglvnd0 (= 1.3.2-1)
-          but none of the choices are installable:
-          - libglvnd0:amd64=1.3.2-1 is not selected for install
-root@gpusrv02:~# pveversion
-pve-manager/9.2.3/d0fde103346cf89a (running kernel: 7.0.6-2-pve)
-root@gpusrv02:~# ^C
-root@gpusrv02:~# cat > /etc/apt/sources.list << 'EOF'
-deb http://ftp.debian.org/debian bullseye main contrib non-free
-deb http://ftp.debian.org/debian bullseye-updates main contrib non-free
-deb http://security.debian.org bullseye-security main contrib non-free
-EOF
-``
-root@gpusrv02:~#
+2026-06-26 14:54:09 (88.4 MB/s) - ‘cuda-keyring_1.1-1_all.deb’ saved [4148/4148]
+
+Selecting previously unselected package cuda-keyring.
+(Reading database ... 85587 files and directories currently installed.)
+Preparing to unpack cuda-keyring_1.1-1_all.deb ...
+Unpacking cuda-keyring (1.1-1) ...
+Setting up cuda-keyring (1.1-1) ...
+Hit:1 http://security.debian.org/debian-security trixie-security InRelease
+Hit:2 http://download.proxmox.com/debian/pve trixie InRelease
+Hit:3 http://deb.debian.org/debian trixie InRelease
+Hit:4 http://deb.debian.org/debian trixie-updates InRelease
+Get:5 https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64  InRelease [1,581 B]
+Err:5 https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64  InRelease
+  Sub-process /usr/bin/sqv returned an error code (1), error message is: Signing key on EB693B3035CD5710E231E123A4B469963BF863CC is not bound:            No binding signature at time 2026-06-24T21:02:14Z   because: Policy rejected non-revocation signature (PositiveCertification) requiring second pre-image resistance   because: SHA1 is not considered secure since 2026-02-01T00:00:00Z
+Warning: OpenPGP signature verification failed: https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64  InRelease: Sub-process /usr/bin/sqv returned an error code (1), error message is: Signing key on EB693B3035CD5710E231E123A4B469963BF863CC is not bound:            No binding signature at time 2026-06-24T21:02:14Z   because: Policy rejected non-revocation signature (PositiveCertification) requiring second pre-image resistance   because: SHA1 is not considered secure since 2026-02-01T00:00:00Z
+Error: The repository 'https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64  InRelease' is not signed.
+Notice: Updating from such a repository can't be done securely, and is therefore disabled by default.
+Notice: See apt-secure(8) manpage for repository creation and user configuration details.
+root@gpusrv02:/tmp#
