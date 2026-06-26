@@ -52,3 +52,47 @@ Done. Apply changes with:
  ✔ Image langfuse/langfuse-worker:3.35.0                                                          Pulled                                                                                                    75.2s
 failed to extract layer (application/vnd.oci.image.layer.v1.tar+gzip sha256:f45c5ef3e1815e8a007d5b0610846cfd8ddafdadd4695ba11fa582b03402d176) to overlayfs as "extract-941131564-cXuU sha256:3c9accce8fa84cf648518383ea7772b347fd5b583296b169c13e8e7e8df67a78": write /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/67/fs/usr/lib/ollama/cuda_v12/libggml-cuda.so: no space left on device
 root@gpusrv02:/opt/llm-inference#
+
+menda 📊 🔎 Sizning server holati
+✅ CPU
+
+128 ta core (0–127) ko‘rinib turibdi
+Load:
+Load average: 0.30 0.77 0.52
+
+
+
+👉 Bu juda past, server deyarli idle
+
+✅ RAM
+
+RAM:
+3.55 GB / 504 GB
+
+
+
+👉 Sizda 504 GB RAM bor 🔥
+👉 Faqat 3.5 GB ishlayapti — deyarli bo‘sh
+
+✅ Tasks
+
+Total:
+49 tasks
+2 running
+
+
+
+👉 Server deyarli ishlamayapti (idle)
+
+✅ Uptime
+00:42:37
+
+👉 Server yangi reboot bo‘lgan
+
+❗ MUAMMO BU EMAS
+👉 CPU ✅
+👉 RAM ✅
+👉 GPU ✅ (oldin tekshirildi)
+🚨 Muammo: DISK
+Bu rasmda disk ko‘rinmayapti, lekin sizda xato chiqdi:
+no space left on device
