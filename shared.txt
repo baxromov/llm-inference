@@ -1,44 +1,169 @@
-root@gpusrv02:/opt/llm-inference# nvidia-ctk runtime configure --runtime=docker
-INFO[0000] Loading config from /etc/docker/daemon.json
-INFO[0000] Wrote updated config to /etc/docker/daemon.json
-INFO[0000] It is recommended that docker daemon be restarted.
-root@gpusrv02:/opt/llm-inference# systemctl restart docker
-root@gpusrv02:/opt/llm-inference# docker compose down
-[+] down 16/16
- ✔ Container litellm              Removed                                                                                                                                                                    0.0s
- ✔ Container grafana              Removed                                                                                                                                                                    0.0s
- ✔ Container ollama-init          Removed                                                                                                                                                                    0.0s
- ✔ Container minio-init           Removed                                                                                                                                                                    0.0s
- ✔ Container langfuse-worker      Removed                                                                                                                                                                    0.0s
- ✔ Container infinity             Removed                                                                                                                                                                    0.0s
- ✔ Container langfuse-web         Removed                                                                                                                                                                    0.0s
- ✔ Container prometheus           Removed                                                                                                                                                                    0.0s
- ✔ Container ollama               Removed                                                                                                                                                                    0.1s
- ✔ Container redis                Removed                                                                                                                                                                    0.3s
- ✔ Container clickhouse           Removed                                                                                                                                                                    2.3s
- ✔ Container postgres             Removed                                                                                                                                                                    0.2s
- ✔ Container minio                Removed                                                                                                                                                                    0.2s
- ✔ Container dcgm-exporter        Removed                                                                                                                                                                    2.5s
- ✔ Network llm-inference_frontend Removed                                                                                                                                                                    0.1s
- ✔ Network llm-inference_internal Removed                                                                                                                                                                    0.1s
-root@gpusrv02:/opt/llm-inference# docker compose up --build -d
-[+] up 16/17
- ✔ Network llm-inference_frontend      Created                                                                                                                                                               0.0s
- ✔ Network llm-inference_internal      Created                                                                                                                                                               0.0s
- ✔ Volume llm-inference_infinity_cache Created                                                                                                                                                               0.0s
- ✔ Container clickhouse                Started                                                                                                                                                               0.4s
- ✔ Container dcgm-exporter             Started                                                                                                                                                               0.5s
- ✔ Container redis                     Started                                                                                                                                                               0.4s
- ✔ Container postgres                  Started                                                                                                                                                               0.4s
- ✔ Container ollama                    Started                                                                                                                                                               0.5s
- ⠼ Container infinity                  Starting                                                                                                                                                              0.5s
- ✔ Container minio                     Started                                                                                                                                                               0.4s
- ✔ Container ollama-init               Created                                                                                                                                                               0.0s
- ✔ Container prometheus                Created                                                                                                                                                               0.0s
- ✔ Container minio-init                Created                                                                                                                                                               0.0s
- ✔ Container langfuse-web              Created                                                                                                                                                               0.1s
- ✔ Container grafana                   Created                                                                                                                                                               0.0s
- ✔ Container langfuse-worker           Created                                                                                                                                                               0.0s
- ✔ Container litellm                   Created                                                                                                                                                               0.0s
-Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: error mounting "/data/docker/volumes/llm-inference_infinity_cache/_data" to rootfs at "/models/.infinity_cache": create mountpoint for /models/.infinity_cache mount: make mountpoint "/models/.infinity_cache": mkdirat /data/docker/rootfs/overlayfs/61e67b072d19a24adc5808653a2c1573e5fd869db8d7f804ebe75a96ab7ce56d/models/.infinity_cache: read-only file system
+root@gpusrv02:/opt/llm-inference# docker compose logs
+ollama  | 2026/06/26 13:01:05 routes.go:1231: INFO server config env="map[CUDA_VISIBLE_DEVICES:0,1 GPU_DEVICE_ORDINAL: HIP_VISIBLE_DEVICES: HSA_OVERRIDE_GFX_VERSION: HTTPS_PROXY: HTTP_PROXY: NO_PROXY: OLLAMA_CONTEXT_LENGTH:2048 OLLAMA_DEBUG:false OLLAMA_FLASH_ATTENTION:false OLLAMA_GPU_OVERHEAD:0 OLLAMA_HOST:http://0.0.0.0:11434 OLLAMA_INTEL_GPU:false OLLAMA_KEEP_ALIVE:24h0m0s OLLAMA_KV_CACHE_TYPE: OLLAMA_LLM_LIBRARY: OLLAMA_LOAD_TIMEOUT:5m0s OLLAMA_MAX_LOADED_MODELS:3 OLLAMA_MAX_QUEUE:512 OLLAMA_MODELS:/root/.ollama/models OLLAMA_MULTIUSER_CACHE:false OLLAMA_NEW_ENGINE:false OLLAMA_NOHISTORY:false OLLAMA_NOPRUNE:false OLLAMA_NUM_PARALLEL:4 OLLAMA_ORIGINS:[http://localhost https://localhost http://localhost:* https://localhost:* http://127.0.0.1 https://127.0.0.1 http://127.0.0.1:* https://127.0.0.1:* http://0.0.0.0 https://0.0.0.0 http://0.0.0.0:* https://0.0.0.0:* app://* file://* tauri://* vscode-webview://* vscode-file://*] OLLAMA_SCHED_SPREAD:true ROCR_VISIBLE_DEVICES: http_proxy: https_proxy: no_proxy:]"
+clickhouse  | /entrypoint.sh: create new user 'langfuse' instead 'default'
+ollama      | time=2026-06-26T13:01:05.094Z level=INFO source=images.go:458 msg="total blobs: 0"
+ollama      | time=2026-06-26T13:01:05.094Z level=INFO source=images.go:465 msg="total unused blobs removed: 0"
+ollama      | time=2026-06-26T13:01:05.094Z level=INFO source=routes.go:1298 msg="Listening on [::]:11434 (version 0.6.5)"
+ollama      | time=2026-06-26T13:01:05.094Z level=INFO source=gpu.go:217 msg="looking for compatible GPUs"
+ollama      | time=2026-06-26T13:01:05.107Z level=INFO source=gpu.go:377 msg="no compatible GPUs were discovered"
+ollama      | time=2026-06-26T13:01:05.107Z level=INFO source=types.go:130 msg="inference compute" id=0 library=cpu variant="" compute="" driver=0.0 name="" total="503.6 GiB" available="496.4 GiB"
+clickhouse  | ClickHouse Database directory appears to contain a database; Skipping initialization
+clickhouse  | Processing configuration file '/etc/clickhouse-server/config.xml'.
+clickhouse  | Merging configuration file '/etc/clickhouse-server/config.d/docker_related_config.xml'.
+infinity    | No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+infinity    | Usage: infinity_emb v2 [OPTIONS]
+infinity    | Try 'infinity_emb v2 --help' for help.
+infinity    | ╭─ Error ──────────────────────────────────────────────────────────────────────╮
+infinity    | │ No such option: --model-name-or-path (Possible options: --model-warmup,      │
+infinity    | │ --served-model-name)                                                         │
+clickhouse  | Logging trace to /var/log/clickhouse-server/clickhouse-server.log
+redis       | 1:C 26 Jun 2026 13:01:05.004 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+postgres    |
+postgres    | PostgreSQL Database directory appears to contain a database; Skipping initialization
+postgres    |
+infinity    | ╰──────────────────────────────────────────────────────────────────────────────╯
+infinity    | No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+postgres    | 2026-06-26 13:01:05.046 UTC [1] LOG:  starting PostgreSQL 16.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+postgres    | 2026-06-26 13:01:05.046 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+postgres    | 2026-06-26 13:01:05.046 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+postgres    | 2026-06-26 13:01:05.046 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+clickhouse  | Logging errors to /var/log/clickhouse-server/clickhouse-server.err.log
+redis       | 1:C 26 Jun 2026 13:01:05.004 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+redis       | 1:C 26 Jun 2026 13:01:05.004 * Redis version=7.2.14, bits=64, commit=00000000, modified=0, pid=1, just started
+redis       | 1:C 26 Jun 2026 13:01:05.004 * Configuration loaded
+redis       | 1:M 26 Jun 2026 13:01:05.004 * Increased maximum number of open files to 10032 (it was originally set to 1024).
+redis       | 1:M 26 Jun 2026 13:01:05.004 * monotonic clock: POSIX clock_gettime
+redis       | 1:M 26 Jun 2026 13:01:05.005 * Running mode=standalone, port=6379.
+postgres    | 2026-06-26 13:01:05.049 UTC [29] LOG:  database system was shut down at 2026-06-26 13:00:42 UTC
+postgres    | 2026-06-26 13:01:05.055 UTC [1] LOG:  database system is ready to accept connections
+postgres    | 2026-06-26 13:01:15.029 UTC [39] FATAL:  database "llmadmin" does not exist
+postgres    | 2026-06-26 13:01:25.079 UTC [46] FATAL:  database "llmadmin" does not exist
+postgres    | 2026-06-26 13:01:35.139 UTC [53] FATAL:  database "llmadmin" does not exist
+postgres    | 2026-06-26 13:01:45.195 UTC [60] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:01:55.251 UTC [67] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:02:05.315 UTC [74] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:02:15.377 UTC [81] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:02:25.431 UTC [88] FATAL:  database "llmadmin" does not exist
+infinity    | Usage: infinity_emb v2 [OPTIONS]
+infinity       | Try 'infinity_emb v2 --help' for help.
+minio          | MinIO Object Storage Server
+redis       | 1:M 26 Jun 2026 13:01:05.007 * Server initialized
+redis          | 1:M 26 Jun 2026 13:01:05.007 * Reading RDB base file on AOF loading...
+redis          | 1:M 26 Jun 2026 13:01:05.007 * Loading RDB produced by version 7.2.14
+infinity       | ╭─ Error ──────────────────────────────────────────────────────────────────────╮
+minio-init     | Added `local` successfully.
+redis          | 1:M 26 Jun 2026 13:01:05.007 * RDB age 1140 seconds
+redis          | 1:M 26 Jun 2026 13:01:05.007 * RDB memory usage when created 0.83 Mb
+redis          | 1:M 26 Jun 2026 13:01:05.007 * RDB is base AOF
+redis          | 1:M 26 Jun 2026 13:01:05.007 * Done loading RDB, keys loaded: 0, keys expired: 0.
+redis          | 1:M 26 Jun 2026 13:01:05.007 * DB loaded from base file appendonly.aof.1.base.rdb: 0.000 seconds
+minio          | Copyright: 2015-2026 MinIO, Inc.
+minio          | License: GNU AGPLv3 - https://www.gnu.org/licenses/agpl-3.0.html
+minio          | Version: RELEASE.2024-11-07T00-52-20Z (go1.23.3 linux/amd64)
+minio          |
+minio          | API: http://172.18.0.2:9000  http://127.0.0.1:9000
+minio          | WebUI: http://172.18.0.2:9001 http://127.0.0.1:9001
+dcgm-exporter  | 2026/06/26 13:01:05 maxprocs: Leaving GOMAXPROCS=128: CPU quota undefined
+minio-init     | Bucket created successfully `local/langfuse-events`.
+minio-init     | Access permission for `local/langfuse-events` is set to `private`
+dcgm-exporter  | time="2026-06-26T13:01:05Z" level=info msg="Starting dcgm-exporter"
+infinity       | │ No such option: --model-name-or-path (Possible options: --model-warmup,      │
+infinity       | │ --served-model-name)                                                         │
+redis          | 1:M 26 Jun 2026 13:01:05.007 * DB loaded from append only file: 0.000 seconds
+redis          | 1:M 26 Jun 2026 13:01:05.007 * Opening AOF incr file appendonly.aof.1.incr.aof on server start
+redis          | 1:M 26 Jun 2026 13:01:05.007 * Ready to accept connections tcp
+infinity       | ╰──────────────────────────────────────────────────────────────────────────────╯
+infinity       | No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+infinity       | Usage: infinity_emb v2 [OPTIONS]
+infinity       | Try 'infinity_emb v2 --help' for help.
+infinity       | ╭─ Error ──────────────────────────────────────────────────────────────────────╮
+infinity       | │ No such option: --model-name-or-path (Possible options: --model-warmup,      │
+dcgm-exporter  | time="2026-06-26T13:01:07Z" level=info msg="DCGM successfully initialized!"
+dcgm-exporter  | time="2026-06-26T13:01:07Z" level=info msg="Not collecting DCP metrics: This request is serviced by a module of DCGM that is not currently loaded"
+dcgm-exporter  | time="2026-06-26T13:01:07Z" level=info msg="Falling back to metric file '/etc/dcgm-exporter/default-counters.csv'"
+dcgm-exporter  | time="2026-06-26T13:01:07Z" level=info msg="Initializing system entities of type: GPU"
+minio          |
+postgres       | 2026-06-26 13:02:35.481 UTC [95] FATAL:  database "llmadmin" does not exist
+dcgm-exporter  | time="2026-06-26T13:01:08Z" level=info msg="Not collecting NvSwitch metrics; no fields to watch for device type: 3"
+minio          | Docs: https://docs.min.io
+postgres       | 2026-06-26 13:02:45.541 UTC [102] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:02:55.599 UTC [109] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:03:05.648 UTC [116] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:03:15.703 UTC [123] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:03:25.759 UTC [130] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:03:35.812 UTC [137] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:03:45.875 UTC [144] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:03:55.935 UTC [151] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:04:05.980 UTC [159] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:04:16.039 UTC [166] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:04:26.094 UTC [173] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:04:36.153 UTC [180] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:04:46.213 UTC [187] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:04:56.274 UTC [194] FATAL:  database "llmadmin" does not exist
+postgres       | 2026-06-26 13:05:06.329 UTC [201] FATAL:  database "llmadmin" does not exist
+infinity       | │ --served-model-name)                                                         │
+infinity       | ╰──────────────────────────────────────────────────────────────────────────────╯
+infinity       | No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+infinity       | Usage: infinity_emb v2 [OPTIONS]
+infinity       | Try 'infinity_emb v2 --help' for help.
+infinity       | ╭─ Error ──────────────────────────────────────────────────────────────────────╮
+infinity       | │ No such option: --model-name-or-path (Possible options: --model-warmup,      │
+infinity       | │ --served-model-name)                                                         │
+infinity       | ╰──────────────────────────────────────────────────────────────────────────────╯
+infinity       | No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+infinity       | Usage: infinity_emb v2 [OPTIONS]
+infinity       | Try 'infinity_emb v2 --help' for help.
+infinity       | ╭─ Error ──────────────────────────────────────────────────────────────────────╮
+dcgm-exporter  | time="2026-06-26T13:01:08Z" level=info msg="Not collecting NvLink metrics; no fields to watch for device type: 6"
+dcgm-exporter  | time="2026-06-26T13:01:08Z" level=info msg="Not collecting CPU metrics; no fields to watch for device type: 7"
+dcgm-exporter  | time="2026-06-26T13:01:08Z" level=info msg="Not collecting CPU Core metrics; no fields to watch for device type: 8"
+dcgm-exporter  | time="2026-06-26T13:01:08Z" level=info msg="Pipeline starting"
+infinity       | │ No such option: --model-name-or-path (Possible options: --model-warmup,      │
+dcgm-exporter  | time="2026-06-26T13:01:08Z" level=info msg="Starting webserver"
+infinity       | │ --served-model-name)                                                         │
+dcgm-exporter  | time="2026-06-26T13:01:08Z" level=info msg="Listening on" address="[::]:9400"
+dcgm-exporter  | time="2026-06-26T13:01:08Z" level=info msg="TLS is disabled." address="[::]:9400" http2=false
+infinity       | ╰──────────────────────────────────────────────────────────────────────────────╯
+infinity       | No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+infinity       | Usage: infinity_emb v2 [OPTIONS]
+infinity       | Try 'infinity_emb v2 --help' for help.
+infinity       | ╭─ Error ──────────────────────────────────────────────────────────────────────╮
+infinity       | │ No such option: --model-name-or-path (Possible options: --model-warmup,      │
+infinity       | │ --served-model-name)                                                         │
+infinity       | ╰──────────────────────────────────────────────────────────────────────────────╯
+infinity       | No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+infinity       | Usage: infinity_emb v2 [OPTIONS]
+infinity       | Try 'infinity_emb v2 --help' for help.
+infinity       | ╭─ Error ──────────────────────────────────────────────────────────────────────╮
+infinity       | │ No such option: --model-name-or-path (Possible options: --model-warmup,      │
+infinity       | │ --served-model-name)                                                         │
+infinity       | ╰──────────────────────────────────────────────────────────────────────────────╯
+infinity       | No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+infinity       | Usage: infinity_emb v2 [OPTIONS]
+infinity       | Try 'infinity_emb v2 --help' for help.
+infinity       | ╭─ Error ──────────────────────────────────────────────────────────────────────╮
+infinity       | │ No such option: --model-name-or-path (Possible options: --model-warmup,      │
+infinity       | │ --served-model-name)                                                         │
+infinity       | ╰──────────────────────────────────────────────────────────────────────────────╯
+infinity       | No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+infinity       | Usage: infinity_emb v2 [OPTIONS]
+infinity       | Try 'infinity_emb v2 --help' for help.
+infinity       | ╭─ Error ──────────────────────────────────────────────────────────────────────╮
+infinity       | │ No such option: --model-name-or-path (Possible options: --model-warmup,      │
+infinity       | │ --served-model-name)                                                         │
+infinity       | ╰──────────────────────────────────────────────────────────────────────────────╯
+infinity       | No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+infinity       | Usage: infinity_emb v2 [OPTIONS]
+infinity       | Try 'infinity_emb v2 --help' for help.
+infinity       | ╭─ Error ──────────────────────────────────────────────────────────────────────╮
+infinity       | │ No such option: --model-name-or-path (Possible options: --model-warmup,      │
+infinity       | │ --served-model-name)                                                         │
+infinity       | ╰──────────────────────────────────────────────────────────────────────────────╯
+infinity       | No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+infinity       | Usage: infinity_emb v2 [OPTIONS]
+infinity       | Try 'infinity_emb v2 --help' for help.
+infinity       | ╭─ Error ──────────────────────────────────────────────────────────────────────╮
+infinity       | │ No such option: --model-name-or-path (Possible options: --model-warmup,      │
+infinity       | │ --served-model-name)                                                         │
+infinity       | ╰──────────────────────────────────────────────────────────────────────────────╯
 root@gpusrv02:/opt/llm-inference#
