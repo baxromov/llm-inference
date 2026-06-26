@@ -92,29 +92,66 @@ echo "options nouveau modeset=0" >> /etc/modprobe.d/blacklist-nouveau.conf
 update-initramfs -u
 ```
 
-### 2d. Download and run the NVIDIA driver installer
+### 2d. Install NVIDIA driver — Method A: Trixie native package (try this first)
 
-> Use the **Data Center / Tesla** driver for A100 (not GeForce).
-> Check the latest version at: https://www.nvidia.com/en-us/drivers/unix/
+Now that sources.list uses correct Trixie repos, the native `nvidia-driver` package should
+install without libglvnd conflicts (those only happened when Bullseye repos were mixed in).
+
+```bash
+# --no-install-recommends skips xserver-xorg-video-nvidia and other X11 packages
+# (this is a headless server — no display needed)
+apt install -y --no-install-recommends \
+  nvidia-driver \
+  nvidia-smi \
+  nvidia-kernel-dkms
+```
+
+> If this succeeds, skip Method B and jump to step 2e (Reboot).
+
+---
+
+### 2d-alt. Install NVIDIA driver — Method B: Official .run installer (if apt fails)
+
+Use this if Method A fails for any reason (package unavailable, dependency issues, etc.).
+The `.run` installer bypasses apt entirely and compiles the module directly against PVE headers.
+
+**Step 1 — Find the correct driver URL:**
+
+Go to https://www.nvidia.com/en-us/drivers/unix/ and find the latest
+**Data Center / Tesla** driver for Linux x86_64. The URL format is:
+```
+https://us.download.nvidia.com/tesla/{VERSION}/NVIDIA-Linux-x86_64-{VERSION}.run
+```
+
+Or use NVIDIA's driver search API to get the latest version for A100:
+```bash
+# This prints the latest recommended Tesla driver version for A100
+curl -s "https://www.nvidia.com/Download/API/lookupValueSearch.aspx?TypeID=1&ProductSeriesID=132&ProductID=928&OSID=1&LanguageCode=1033" \
+  | grep -o 'Version=[0-9.]*' | head -1
+```
+
+**Step 2 — Download and install:**
 
 ```bash
 cd /tmp
 
-# Tesla/Data Center driver 570.x — current recommended for A100
-wget https://us.download.nvidia.com/tesla/570.133.07/NVIDIA-Linux-x86_64-570.133.07.run
-chmod +x NVIDIA-Linux-x86_64-570.133.07.run
+# Replace VERSION with the actual version found above (e.g. 550.90.07, 565.57.01)
+DRIVER_VERSION="550.90.07"   # ← change this to the real version
+wget "https://us.download.nvidia.com/tesla/${DRIVER_VERSION}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run"
+chmod +x "NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run"
 
-# Install: headless (no X11), silent, register with DKMS so it survives kernel updates
-./NVIDIA-Linux-x86_64-570.133.07.run \
+./NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run \
   --no-x-check \
   --no-opengl-files \
   --silent \
   --dkms
 ```
 
-> `--dkms` registers the module with DKMS so it automatically recompiles after kernel updates.
-> `--no-opengl-files` skips X11/OpenGL (not needed on a headless GPU server).
-> Takes ~5 minutes to compile the kernel module.
+> `--dkms` registers the module so it recompiles automatically after kernel updates.
+> `--no-opengl-files` skips X11/OpenGL (not needed on a headless server).
+> Takes ~5–10 minutes to compile the kernel module.
+
+---
 
 ### 2e. Reboot
 
@@ -131,7 +168,7 @@ nvidia-smi
 Expected output:
 ```
 +-----------------------------------------------------------------------------+
-| NVIDIA-SMI 570.133.07  Driver Version: 570.133.07  CUDA Version: 12.x      |
+| NVIDIA-SMI 5xx.xx.xx  Driver Version: 5xx.xx.xx  CUDA Version: 12.x        |
 |-------------------------------+----------------------+----------------------+
 | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC|
 |   0  A100 SXM4 80GB Off      | 00000000:0B:00.0 Off |                  Off |
@@ -139,10 +176,10 @@ Expected output:
 +-----------------------------------------------------------------------------+
 ```
 
-Check DKMS module is registered (important for surviving kernel updates):
+Check DKMS module is registered:
 ```bash
 dkms status
-# expected: nvidia/570.133.07, 7.0.6-2-pve, x86_64: installed
+# expected: nvidia/{version}, 7.0.6-2-pve, x86_64: installed
 ```
 
 ---
@@ -485,19 +522,25 @@ apt update
 apt install -y cuda-drivers
 ```
 
-### NVIDIA apt repo rejected: `SHA1 is not considered secure` (Trixie sqv policy)
+### NVIDIA CUDA apt repo rejected: `SHA1 is not considered secure` (Trixie sqv policy)
 
 Debian Trixie's Sequoia PGP (`sqv`) rejects SHA1-signed repos since 2026-02-01.
-Both NVIDIA's CUDA repo and container toolkit repo are affected. **Solution: use `.run` installer.**
+NVIDIA's CUDA apt repo is affected. Solutions:
 
+**For NVIDIA driver:** Use Trixie native package first (Method A in Section 2d):
 ```bash
-# For NVIDIA driver — use .run installer (Section 2d above)
-cd /tmp
-wget https://us.download.nvidia.com/tesla/570.133.07/NVIDIA-Linux-x86_64-570.133.07.run
-chmod +x NVIDIA-Linux-x86_64-570.133.07.run
-./NVIDIA-Linux-x86_64-570.133.07.run --no-x-check --no-opengl-files --silent --dkms
+apt install -y --no-install-recommends nvidia-driver nvidia-smi nvidia-kernel-dkms
+```
 
-# For nvidia-container-toolkit — add repo with [trusted=yes] to skip verification
+If that fails, find the correct `.run` URL from https://www.nvidia.com/en-us/drivers/unix/
+and use Method B (Section 2d-alt). Do NOT hardcode a version — verify it exists first:
+```bash
+DRIVER_VERSION="550.90.07"  # verify this version exists before running
+wget "https://us.download.nvidia.com/tesla/${DRIVER_VERSION}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run"
+```
+
+**For nvidia-container-toolkit** — add repo with `[trusted=yes]`:
+```bash
 curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
   sed 's#deb https://#deb [trusted=yes] https://#g' | \
   tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
