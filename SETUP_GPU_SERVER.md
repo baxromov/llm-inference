@@ -159,22 +159,28 @@ wget "$DRIVER_URL"
 chmod +x "NVIDIA-Linux-x86_64-${DRIVER_VER}.run"
 ```
 
-**Step 3 — Install with explicit GCC path:**
+**Step 3 — Install with explicit GCC and proprietary module type:**
 
-The NVIDIA installer auto-detects which GCC compiled the PVE kernel (gcc-12) and tries to use
-it. But **gcc-12 is not available in Trixie**. Override with the system GCC (gcc-14) explicitly:
+Two required flags for PVE kernels:
+- `CC=/usr/bin/gcc` — PVE kernel was built with gcc-12 (not in Trixie); override to use gcc-14
+- `--kernel-module-type=proprietary` — the MIT/GPL (open-source) module fails with PVE headers
+  (`conftest.h` and internal NVIDIA headers not found); proprietary module is more compatible
 
 ```bash
-# CC=/usr/bin/gcc forces gcc-14 (the installed version) instead of auto-detected gcc-12
 CC=/usr/bin/gcc ./NVIDIA-Linux-x86_64-${DRIVER_VER}.run \
   --no-x-check \
   --no-opengl-files \
   --kernel-source-path=/usr/src/linux-headers-$(uname -r) \
-  --dkms 2>&1 | tee /tmp/nvidia-install.log
+  --kernel-module-type=proprietary \
+  --silent \
+  --dkms
 
-# Watch for: "Installation of the NVIDIA Accelerated Graphics Driver... is now complete."
-tail -20 /tmp/nvidia-install.log
+# Check result:
+tail -5 /var/log/nvidia-installer.log
 ```
+
+> If prompted to choose kernel module type, select **proprietary** (not MIT/GPL).
+> MIT/GPL open-source modules fail on PVE custom kernels due to missing conftest.h.
 
 > `--dkms` registers the module so it recompiles automatically after kernel updates.
 > `--no-opengl-files` skips X11/OpenGL — not needed on a headless GPU server.
@@ -581,20 +587,26 @@ apt install -y nvidia-container-toolkit
 
 ### `.run` installer fails: "CC sanity check failed" / gcc-12 not found
 
-The NVIDIA installer reads the GCC version that compiled the PVE kernel and tries to use it.
-The PVE `7.0.6-2-pve` kernel was built with **gcc-12**, but gcc-12 does not exist in Trixie.
+The PVE `7.0.6-2-pve` kernel was built with **gcc-12**, but gcc-12 is not in Trixie repos.
+The installer auto-detects gcc-12 and fails. Fix: force gcc-14 via `CC=/usr/bin/gcc`.
 
-Fix: override `CC` to point to the available system GCC (gcc-14):
+### `.run` installer fails: `conftest.h: No such file or directory` (MIT/GPL module)
+
+The MIT/GPL (open-source) kernel module fails on PVE custom kernels — `conftest.h` and NVIDIA
+internal headers (`nvtypes.h`, `nvmisc.h`, etc.) are not generated/found correctly.
+Fix: use `--kernel-module-type=proprietary` which uses a different, more compatible build path.
 
 ```bash
+# Both fixes combined — use this command:
 CC=/usr/bin/gcc /tmp/NVIDIA-Linux-x86_64-570.86.15.run \
   --no-x-check \
   --no-opengl-files \
   --kernel-source-path=/usr/src/linux-headers-$(uname -r) \
-  --dkms 2>&1 | tee /tmp/nvidia-install.log
+  --kernel-module-type=proprietary \
+  --silent \
+  --dkms
 
-tail -20 /tmp/nvidia-install.log
-dkms status
+tail -5 /var/log/nvidia-installer.log
 nvidia-smi
 ```
 
