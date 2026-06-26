@@ -157,12 +157,36 @@ echo "Will download: $DRIVER_URL"
 ```bash
 wget "$DRIVER_URL"
 chmod +x "NVIDIA-Linux-x86_64-${DRIVER_VER}.run"
+```
 
-./NVIDIA-Linux-x86_64-${DRIVER_VER}.run \
+**Step 3 — Install with GCC 12 (required on Trixie — GCC 14 breaks NVIDIA module build):**
+
+```bash
+# Trixie ships GCC 14 by default — NVIDIA 570 kernel module fails to compile with it.
+# GCC 12 is required.
+apt install -y gcc-12
+
+# Explicit kernel source path + GCC 12
+CC=gcc-12 ./NVIDIA-Linux-x86_64-${DRIVER_VER}.run \
   --no-x-check \
   --no-opengl-files \
+  --kernel-source-path=/usr/src/linux-headers-$(uname -r) \
   --silent \
   --dkms
+```
+
+If it still fails, run **without `--silent`** to see the exact compiler error:
+
+```bash
+CC=gcc-12 ./NVIDIA-Linux-x86_64-${DRIVER_VER}.run \
+  --no-x-check \
+  --no-opengl-files \
+  --kernel-source-path=/usr/src/linux-headers-$(uname -r) \
+  --dkms \
+  2>&1 | tee /tmp/nvidia-build.log
+
+# Then check the log:
+tail -80 /var/log/nvidia-installer.log
 ```
 
 > `--dkms` registers the module so it recompiles automatically after kernel updates.
@@ -566,6 +590,29 @@ curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-contai
   tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
 apt update
 apt install -y nvidia-container-toolkit
+```
+
+### `.run` installer fails: "Building kernel modules" error
+
+Debian Trixie ships GCC 14 by default. NVIDIA 570 kernel module fails to compile with GCC 14.
+
+```bash
+# Step 1: check exact error
+tail -80 /var/log/nvidia-installer.log
+
+# Step 2: install GCC 12 and retry with explicit kernel path
+apt install -y gcc-12
+
+CC=gcc-12 /tmp/NVIDIA-Linux-x86_64-570.86.15.run \
+  --no-x-check \
+  --no-opengl-files \
+  --kernel-source-path=/usr/src/linux-headers-$(uname -r) \
+  --silent \
+  --dkms
+
+# Verify after success:
+dkms status
+nvidia-smi
 ```
 
 ### `nvidia-smi: command not found` after reboot
