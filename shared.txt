@@ -1,4 +1,94 @@
-dcgm-exporter  | time="2026-06-26T13:16:56Z" level=info msg="TLS is disabled." address="[::]:9400" http2=false
+root@gpusrv02:/opt/llm-inference# docker compose up --build -d
+WARN[0000] The "POSTGRES_DB" variable is not set. Defaulting to a blank string.
+[+] up 12/16
+ ✔ Network llm-inference_frontend Created                                                                                                                                                                    0.0s
+ ✔ Network llm-inference_internal Created                                                                                                                                                                    0.0s
+ ✔ Container infinity             Started                                                                                                                                                                    0.5s
+ ⠦ Container postgres             Waiting                                                                                                                                                                   40.8s
+ ⠦ Container ollama               Waiting                                                                                                                                                                   40.8s
+ ⠦ Container clickhouse           Waiting                                                                                                                                                                   40.8s
+ ✔ Container minio                Healthy                                                                                                                                                                   10.9s
+ ⠦ Container dcgm-exporter        Waiting                                                                                                                                                                   40.8s
+ ✔ Container redis                Healthy                                                                                                                                                                   10.9s
+ ✔ Container prometheus           Created                                                                                                                                                                    0.0s
+ ✔ Container ollama-init          Created                                                                                                                                                                    0.0s
+ ✔ Container minio-init           Started                                                                                                                                                                   11.0s
+ ✔ Container langfuse-web         Created                                                                                                                                                                    0.0s
+ ✔ Container grafana              Created                                                                                                                                                                    0.0s
+ ✔ Container langfuse-worker      Created                                                                                                                                                                    0.0s
+ ✔ Container litellm              Created                                                                                                                                                                    0.0s
+
+
+root@gpusrv02:/opt/llm-inference# docker compose logs -f
+WARN[0000] The "POSTGRES_DB" variable is not set. Defaulting to a blank string.
+minio  | MinIO Object Storage Server
+minio  | Copyright: 2015-2026 MinIO, Inc.
+minio  | License: GNU AGPLv3 - https://www.gnu.org/licenses/agpl-3.0.html
+minio  | Version: RELEASE.2024-11-07T00-52-20Z (go1.23.3 linux/amd64)
+minio  |
+minio  | API: http://172.19.0.4:9000  http://127.0.0.1:9000
+minio  | WebUI: http://172.19.0.4:9001 http://127.0.0.1:9001
+minio  |
+minio  | Docs: https://docs.min.io
+dcgm-exporter  | 2026/06/26 13:26:12 maxprocs: Leaving GOMAXPROCS=128: CPU quota undefined
+dcgm-exporter  | time="2026-06-26T13:26:12Z" level=info msg="Starting dcgm-exporter"
+dcgm-exporter  | time="2026-06-26T13:26:14Z" level=info msg="DCGM successfully initialized!"
+dcgm-exporter  | time="2026-06-26T13:26:14Z" level=info msg="Not collecting DCP metrics: This request is serviced by a module of DCGM that is not currently loaded"
+dcgm-exporter  | time="2026-06-26T13:26:14Z" level=info msg="Falling back to metric file '/etc/dcgm-exporter/default-counters.csv'"
+dcgm-exporter  | time="2026-06-26T13:26:14Z" level=info msg="Initializing system entities of type: GPU"
+dcgm-exporter  | time="2026-06-26T13:26:16Z" level=info msg="Not collecting NvSwitch metrics; no fields to watch for device type: 3"
+dcgm-exporter  | time="2026-06-26T13:26:16Z" level=info msg="Not collecting NvLink metrics; no fields to watch for device type: 6"
+dcgm-exporter  | time="2026-06-26T13:26:16Z" level=info msg="Not collecting CPU metrics; no fields to watch for device type: 7"
+dcgm-exporter  | time="2026-06-26T13:26:16Z" level=info msg="Not collecting CPU Core metrics; no fields to watch for device type: 8"
+dcgm-exporter  | time="2026-06-26T13:26:16Z" level=info msg="Pipeline starting"
+dcgm-exporter  | time="2026-06-26T13:26:16Z" level=info msg="Starting webserver"
+dcgm-exporter  | time="2026-06-26T13:26:16Z" level=info msg="Listening on" address="[::]:9400"
+dcgm-exporter  | time="2026-06-26T13:26:16Z" level=info msg="TLS is disabled." address="[::]:9400" http2=false
+clickhouse     | /entrypoint.sh: create new user 'langfuse' instead 'default'
+clickhouse     | ClickHouse Database directory appears to contain a database; Skipping initialization
+clickhouse     | Processing configuration file '/etc/clickhouse-server/config.xml'.
+clickhouse     | Merging configuration file '/etc/clickhouse-server/config.d/docker_related_config.xml'.
+clickhouse     | Logging trace to /var/log/clickhouse-server/clickhouse-server.log
+clickhouse     | Logging errors to /var/log/clickhouse-server/clickhouse-server.err.log
+postgres       |
+postgres       | PostgreSQL Database directory appears to contain a database; Skipping initialization
+postgres       |
+postgres       | 2026-06-26 13:26:12.297 UTC [1] LOG:  starting PostgreSQL 16.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+postgres       | 2026-06-26 13:26:12.297 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+postgres       | 2026-06-26 13:26:12.297 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+redis          | 1:C 26 Jun 2026 13:26:12.272 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+redis          | 1:C 26 Jun 2026 13:26:12.273 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+postgres       | 2026-06-26 13:26:12.298 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgres       | 2026-06-26 13:26:12.301 UTC [29] LOG:  database system was shut down at 2026-06-26 13:26:04 UTC
+redis          | 1:C 26 Jun 2026 13:26:12.273 * Redis version=7.2.14, bits=64, commit=00000000, modified=0, pid=1, just started
+redis          | 1:C 26 Jun 2026 13:26:12.273 * Configuration loaded
+redis          | 1:M 26 Jun 2026 13:26:12.273 * Increased maximum number of open files to 10032 (it was originally set to 1024).
+redis          | 1:M 26 Jun 2026 13:26:12.273 * monotonic clock: POSIX clock_gettime
+postgres       | 2026-06-26 13:26:12.306 UTC [1] LOG:  database system is ready to accept connections
+ollama         | 2026/06/26 13:26:12 routes.go:1231: INFO server config env="map[CUDA_VISIBLE_DEVICES:0,1 GPU_DEVICE_ORDINAL: HIP_VISIBLE_DEVICES: HSA_OVERRIDE_GFX_VERSION: HTTPS_PROXY: HTTP_PROXY: NO_PROXY: OLLAMA_CONTEXT_LENGTH:2048 OLLAMA_DEBUG:false OLLAMA_FLASH_ATTENTION:false OLLAMA_GPU_OVERHEAD:0 OLLAMA_HOST:http://0.0.0.0:11434 OLLAMA_INTEL_GPU:false OLLAMA_KEEP_ALIVE:24h0m0s OLLAMA_KV_CACHE_TYPE: OLLAMA_LLM_LIBRARY: OLLAMA_LOAD_TIMEOUT:5m0s OLLAMA_MAX_LOADED_MODELS:3 OLLAMA_MAX_QUEUE:512 OLLAMA_MODELS:/root/.ollama/models OLLAMA_MULTIUSER_CACHE:false OLLAMA_NEW_ENGINE:false OLLAMA_NOHISTORY:false OLLAMA_NOPRUNE:false OLLAMA_NUM_PARALLEL:4 OLLAMA_ORIGINS:[http://localhost https://localhost http://localhost:* https://localhost:* http://127.0.0.1 https://127.0.0.1 http://127.0.0.1:* https://127.0.0.1:* http://0.0.0.0 https://0.0.0.0 http://0.0.0.0:* https://0.0.0.0:* app://* file://* tauri://* vscode-webview://* vscode-file://*] OLLAMA_SCHED_SPREAD:true ROCR_VISIBLE_DEVICES: http_proxy: https_proxy: no_proxy:]"
+ollama         | time=2026-06-26T13:26:12.360Z level=INFO source=images.go:458 msg="total blobs: 0"
+ollama         | time=2026-06-26T13:26:12.360Z level=INFO source=images.go:465 msg="total unused blobs removed: 0"
+ollama         | time=2026-06-26T13:26:12.361Z level=INFO source=routes.go:1298 msg="Listening on [::]:11434 (version 0.6.5)"
+ollama         | time=2026-06-26T13:26:12.361Z level=INFO source=gpu.go:217 msg="looking for compatible GPUs"
+ollama         | time=2026-06-26T13:26:12.373Z level=INFO source=gpu.go:377 msg="no compatible GPUs were discovered"
+ollama         | time=2026-06-26T13:26:12.373Z level=INFO source=types.go:130 msg="inference compute" id=0 library=cpu variant="" compute="" driver=0.0 name="" total="503.6 GiB" available="496.2 GiB"
+redis          | 1:M 26 Jun 2026 13:26:12.274 * Running mode=standalone, port=6379.
+redis          | 1:M 26 Jun 2026 13:26:12.275 * Server initialized
+redis          | 1:M 26 Jun 2026 13:26:12.276 * Reading RDB base file on AOF loading...
+redis          | 1:M 26 Jun 2026 13:26:12.276 * Loading RDB produced by version 7.2.14
+redis          | 1:M 26 Jun 2026 13:26:12.276 * RDB age 2647 seconds
+redis          | 1:M 26 Jun 2026 13:26:12.276 * RDB memory usage when created 0.83 Mb
+redis          | 1:M 26 Jun 2026 13:26:12.276 * RDB is base AOF
+redis          | 1:M 26 Jun 2026 13:26:12.276 * Done loading RDB, keys loaded: 0, keys expired: 0.
+redis          | 1:M 26 Jun 2026 13:26:12.276 * DB loaded from base file appendonly.aof.1.base.rdb: 0.000 seconds
+redis          | 1:M 26 Jun 2026 13:26:12.276 * DB loaded from append only file: 0.000 seconds
+redis          | 1:M 26 Jun 2026 13:26:12.276 * Opening AOF incr file appendonly.aof.1.incr.aof on server start
+redis          | 1:M 26 Jun 2026 13:26:12.276 * Ready to accept connections tcp
+minio-init     | Added `local` successfully.
+minio-init     | Bucket created successfully `local/langfuse-events`.
+minio-init     | Access permission for `local/langfuse-events` is set to `private`
+infinity       | No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+minio-init exited with code 0
 infinity       | ╭───────────────────── Traceback (most recent call last) ──────────────────────╮
 infinity       | │ /app/infinity_emb/infinity_server.py:923 in v2                               │
 infinity       | │                                                                              │
@@ -28,7 +118,7 @@ infinity       | │ │            log_level = <UVICORN_LOG_LEVELS.info: 'info'
 infinity       | │ │             model_id = ['michaelfeil/bge-small-en-v1.5']                 │ │
 infinity       | │ │         model_warmup = [True]                                            │ │
 infinity       | │ │               padder = <infinity_emb.infinity_server.AutoPadding object  │ │
-infinity       | │ │                        at 0x7f52c0fe99c0>                                │ │
+infinity       | │ │                        at 0x7b64a86450f0>                                │ │
 infinity       | │ │      permissive_cors = False                                             │ │
 infinity       | │ │       pooling_method = [<PoolingMethod.auto: 'auto'>]                    │ │
 infinity       | │ │                 port = 7997                                              │ │
@@ -72,7 +162,7 @@ infinity       | │ │             │   'lengths_via_tokenize': False,       
 infinity       | │ │             │   ... +5                                                   │ │
 infinity       | │ │             }                                                            │ │
 infinity       | │ │      self = <infinity_emb.infinity_server.AutoPadding object at          │ │
-infinity       | │ │             0x7f52c0fe99c0>                                              │ │
+infinity       | │ │             0x7b64a86450f0>                                              │ │
 infinity       | │ │     value = ['/models/BAAI/bge-m3', '/models/BAAI/bge-reranker-v2-m3']   │ │
 infinity       | │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 infinity       | │                                                                              │
@@ -89,7 +179,7 @@ infinity       | │                                                            
 infinity       | │ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
 infinity       | │ │ iteration = 0                                                            │ │
 infinity       | │ │      self = <infinity_emb.infinity_server.AutoPadding object at          │ │
-infinity       | │ │             0x7f52c0fe99c0>                                              │ │
+infinity       | │ │             0x7b64a86450f0>                                              │ │
 infinity       | │ │         x = ['/models/BAAI/bge-m3', '/models/BAAI/bge-reranker-v2-m3']   │ │
 infinity       | │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 infinity       | ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -125,7 +215,7 @@ infinity       | │ │            log_level = <UVICORN_LOG_LEVELS.info: 'info'
 infinity       | │ │             model_id = ['michaelfeil/bge-small-en-v1.5']                 │ │
 infinity       | │ │         model_warmup = [True]                                            │ │
 infinity       | │ │               padder = <infinity_emb.infinity_server.AutoPadding object  │ │
-infinity       | │ │                        at 0x790289ee7dc0>                                │ │
+infinity       | │ │                        at 0x7ea61965bdc0>                                │ │
 infinity       | │ │      permissive_cors = False                                             │ │
 infinity       | │ │       pooling_method = [<PoolingMethod.auto: 'auto'>]                    │ │
 infinity       | │ │                 port = 7997                                              │ │
@@ -150,4 +240,46 @@ infinity       | │   643 │   │   │   for key, value in self.kwargs.items
 infinity       | │ ❱ 644 │   │   │   │   kwargs[key] = self._resolve(value, iteration)          │
 infinity       | │   645 │   │   │   yield kwargs                                               │
 infinity       | │   646                                                                        │
-infinity       | │   647
+infinity       | │   647                                                                        │
+infinity       | │                                                                              │
+infinity       | │ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+infinity       | │ │ iteration = 0                                                            │ │
+infinity       | │ │       key = 'served_model_name'                                          │ │
+infinity       | │ │    kwargs = {                                                            │ │
+infinity       | │ │             │   'model_name_or_path': 'michaelfeil/bge-small-en-v1.5',   │ │
+infinity       | │ │             │   'batch_size': 64,                                        │ │
+infinity       | │ │             │   'revision': '',                                          │ │
+infinity       | │ │             │   'trust_remote_code': True,                               │ │
+infinity       | │ │             │   'engine': <InferenceEngine.torch: 'torch'>,              │ │
+infinity       | │ │             │   'model_warmup': True,                                    │ │
+infinity       | │ │             │   'vector_disk_cache_path': False,                         │ │
+infinity       | │ │             │   'device': <Device.cuda: 'cuda'>,                         │ │
+infinity       | │ │             │   'device_id': DeviceID(),                                 │ │
+infinity       | │ │             │   'lengths_via_tokenize': False,                           │ │
+infinity       | │ │             │   ... +5                                                   │ │
+infinity       | │ │             }                                                            │ │
+infinity       | │ │      self = <infinity_emb.infinity_server.AutoPadding object at          │ │
+infinity       | │ │             0x7ea61965bdc0>                                              │ │
+infinity       | │ │     value = ['/models/BAAI/bge-m3', '/models/BAAI/bge-reranker-v2-m3']   │ │
+infinity       | │ ╰──────────────────────────────────────────────────────────────────────────╯ │
+infinity       | │                                                                              │
+infinity       | │ /app/infinity_emb/infinity_server.py:637 in _resolve                         │
+infinity       | │                                                                              │
+infinity       | │   634 │   │   elif len(x) == self.length:                                    │
+infinity       | │   635 │   │   │   return x[iteration]                                        │
+infinity       | │   636 │   │   else:                                                          │
+infinity       | │ ❱ 637 │   │   │   raise ValueError(f"Expected length {self.length} but got { │
+infinity       | │   638 │                                                                      │
+infinity       | │   639 │   def __iter__(self):                                                │
+infinity       | │   640 │   │   """iterate over kwargs and pad them to length of self.length"" │
+infinity       | │                                                                              │
+infinity       | │ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+infinity       | │ │ iteration = 0                                                            │ │
+infinity       | │ │      self = <infinity_emb.infinity_server.AutoPadding object at          │ │
+infinity       | │ │             0x7ea61965bdc0>                                              │ │
+infinity       | │ │         x = ['/models/BAAI/bge-m3', '/models/BAAI/bge-reranker-v2-m3']   │ │
+infinity       | │ ╰──────────────────────────────────────────────────────────────────────────╯ │
+infinity       | ╰──────────────────────────────────────────────────────────────────────────────╯
+infinity       | ValueError: Expected length 1 but got 2
+infinity exited with code 1 (restarting)
+infinity       | No CUDA runtime is found, using CUDA_HOME='/
