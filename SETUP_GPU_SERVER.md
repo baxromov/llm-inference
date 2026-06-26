@@ -60,11 +60,45 @@ lspci | grep -i nvidia
 > **PVE 9 / Debian Trixie specific issues encountered:**
 > - `nvidia-driver` from Debian repos → `libglvnd0` version conflict (fixed by using Trixie repos)
 > - NVIDIA CUDA apt repo → SHA1 signature rejected by Trixie's sqv since 2026-02-01
+> - NVIDIA 570 does NOT support Linux kernel 7.x — `conftest.sh` fails silently, causing
+>   `conftest.h` and all other headers to not be found during module compilation
 >
-> **Solution:** Use NVIDIA's `.run` installer — bypasses apt and the SHA1/sqv issue entirely.
-> This is also NVIDIA's recommended approach for servers with custom kernels (like PVE).
+> **Root cause:** PVE 9.2.3 ships with kernel `7.0.6-2-pve` (Linux 7.x). NVIDIA 570 is only
+> certified for Linux kernels up to 6.x. **Fix: install a PVE 6.x kernel and boot into it.**
 
-### 2a. Fix sources.list — use Trixie repos only
+### 2a. Install a PVE 6.x kernel (REQUIRED — NVIDIA 570 does not support Linux 7.x)
+
+PVE 9.2.3 ships with kernel `7.0.6-2-pve` (Linux 7.x). NVIDIA 570's `conftest.sh` fails on
+Linux 7.x — it cannot probe kernel features, so `conftest.h` is never generated and the entire
+kernel module compilation fails. You must boot into a Linux 6.x kernel.
+
+```bash
+# See which PVE 6.x kernels are available
+apt-cache search proxmox-kernel | grep -v debug | grep -v signed | grep -v headers
+
+# Install the 6.x kernel and its headers (use the version shown above, e.g. 6.8 or 6.12)
+apt install -y proxmox-kernel-6.8 proxmox-headers-6.8
+
+# List installed kernels to get the exact version name
+proxmox-boot-tool kernel list
+
+# Pin 6.x as default boot kernel (replace X.X.X-X with actual version from list above)
+proxmox-boot-tool kernel pin 6.X.X-X-pve
+
+# Reboot into the 6.x kernel
+reboot
+```
+
+After reboot, verify you're on the 6.x kernel before continuing:
+
+```bash
+uname -r   # must show 6.x.x-pve, NOT 7.x.x-pve
+```
+
+> The 7.0.6 kernel stays installed and can be booted manually from the GRUB menu if needed.
+> Only the DEFAULT boot target is changed.
+
+### 2b. Fix sources.list — use Trixie repos only
 
 ```bash
 cat > /etc/apt/sources.list << 'EOF'
@@ -77,14 +111,14 @@ EOF
 apt update
 ```
 
-### 2b. Install PVE kernel headers and build tools
+### 2c. Install PVE kernel headers and build tools
 
 ```bash
 # 'pve-headers-*' is an alias — apt resolves it to 'proxmox-headers-*' automatically
 apt install -y pve-headers-$(uname -r) build-essential dkms
 ```
 
-### 2c. Disable Nouveau (before installing NVIDIA driver)
+### 2d. Disable Nouveau (before installing NVIDIA driver)
 
 ```bash
 echo "blacklist nouveau" > /etc/modprobe.d/blacklist-nouveau.conf
