@@ -124,35 +124,20 @@ echo "options nouveau modeset=0" >> /etc/modprobe.d/blacklist-nouveau.conf
 update-initramfs -u
 ```
 
-### 2d. Install NVIDIA driver — Method A: Trixie native package (check availability first)
+### 2d. Install NVIDIA driver via apt (works on kernel 6.14 with Trixie repos)
 
-The package names vary across Debian versions. Always check what's actually in the repo first:
-
-```bash
-# Search for available NVIDIA packages in the configured repos
-apt-cache search nvidia | grep -iE "(driver|dkms|kernel)" | sort
-```
-
-If you see `nvidia-driver` in the output, install it:
+With kernel 6.14 and Trixie repos correctly set, `apt-cache search nvidia` shows all packages
+including `nvidia-driver` and `nvidia-kernel-dkms`. Install via apt — no `.run` file needed.
 
 ```bash
-# --no-install-recommends skips X11/xserver packages (headless server)
-apt install -y --no-install-recommends nvidia-driver
+# --no-install-recommends skips xserver-xorg-video-nvidia and other X11 packages
+apt install -y --no-install-recommends nvidia-driver nvidia-kernel-dkms
 ```
 
-Common alternative package names in Trixie — try if `nvidia-driver` is not found:
+DKMS automatically compiles the kernel module against `6.14.11-9-pve` headers during install.
+Wait for it to finish (3–5 minutes) — you'll see `DKMS: install completed` in the output.
 
-```bash
-# Option 1: versioned meta-package (e.g. 570, 550, 535 — use the version shown by apt-cache search)
-apt install -y --no-install-recommends nvidia-driver-570
-
-# Option 2: just the kernel module + userspace utils
-apt install -y nvidia-kernel-dkms nvidia-driver-libs nvidia-open
-
-# Option 3: check exact package name interactively
-apt-cache search nvidia | grep -i "nvidia-driver" | awk '{print $1}'
-```
-
+> If `nvidia-driver` is NOT found by apt (e.g. on a different kernel version), use Method B below.
 > If Method A installs without errors, skip Method B and jump to step 2e (Reboot).
 
 ---
