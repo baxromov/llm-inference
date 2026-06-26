@@ -73,30 +73,28 @@ Linux 7.x — it cannot probe kernel features, so `conftest.h` is never generate
 kernel module compilation fails. You must boot into a Linux 6.x kernel.
 
 ```bash
-# See which PVE 6.x kernels are available
+# See which PVE 6.x kernels are available (on this server: 6.14.x and 6.17.x series)
 apt-cache search proxmox-kernel | grep -v debug | grep -v signed | grep -v headers
 
-# Install the 6.x kernel and its headers (use the version shown above, e.g. 6.8 or 6.12)
-apt install -y proxmox-kernel-6.8 proxmox-headers-6.8
+# Install 6.14.11-9-pve — the latest stable 6.14 kernel (confirmed available on this server)
+# 6.14 is the recommended target: newer than 6.8/6.12, still within NVIDIA 570 support range
+apt install -y proxmox-kernel-6.14.11-9-pve proxmox-headers-6.14.11-9-pve
 
-# List installed kernels to get the exact version name
-proxmox-boot-tool kernel list
+# Pin as default boot kernel
+proxmox-boot-tool kernel pin 6.14.11-9-pve
 
-# Pin 6.x as default boot kernel (replace X.X.X-X with actual version from list above)
-proxmox-boot-tool kernel pin 6.X.X-X-pve
-
-# Reboot into the 6.x kernel
+# Reboot into the 6.14 kernel
 reboot
 ```
 
-After reboot, verify you're on the 6.x kernel before continuing:
+After reboot, verify you're on the 6.14 kernel before continuing:
 
 ```bash
-uname -r   # must show 6.x.x-pve, NOT 7.x.x-pve
+uname -r   # must show 6.14.11-9-pve, NOT 7.0.6-2-pve
 ```
 
-> The 7.0.6 kernel stays installed and can be booted manually from the GRUB menu if needed.
-> Only the DEFAULT boot target is changed.
+> The 7.0.6 kernel stays installed and can be booted manually if needed.
+> Only the default boot target is changed to 6.14.
 
 ### 2b. Fix sources.list — use Trixie repos only
 
@@ -195,10 +193,10 @@ chmod +x "NVIDIA-Linux-x86_64-${DRIVER_VER}.run"
 
 **Step 3 — Install with explicit GCC and proprietary module type:**
 
-Two required flags for PVE kernels:
-- `CC=/usr/bin/gcc` — PVE kernel was built with gcc-12 (not in Trixie); override to use gcc-14
-- `--kernel-module-type=proprietary` — the MIT/GPL (open-source) module fails with PVE headers
-  (`conftest.h` and internal NVIDIA headers not found); proprietary module is more compatible
+Three required conditions for success on PVE:
+1. **Running Linux 6.x kernel** (not 7.x — done in step 2a)
+2. **`CC=/usr/bin/gcc`** — PVE kernel built with gcc-12 (not in Trixie); override to gcc-14
+3. **`--kernel-module-type=proprietary`** — MIT/GPL module fails on PVE headers; use proprietary
 
 ```bash
 CC=/usr/bin/gcc ./NVIDIA-Linux-x86_64-${DRIVER_VER}.run \
