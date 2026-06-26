@@ -33,6 +33,7 @@ volumes:
   redis_data:
   prometheus_data:
   grafana_data:
+  infinity_cache:
 
 services:
 
@@ -99,6 +100,7 @@ services:
       - internal
     volumes:
       - ./infinity/models:/models:ro
+      - infinity_cache:/models/.infinity_cache
       - ./infinity/entrypoint.sh:/entrypoint.sh:ro
     environment:
       - HF_HOME=/models
@@ -161,7 +163,8 @@ services:
       test: ["CMD", "wget", "-qO-", "http://localhost:8123/ping"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 60s
 
   # ── 5. REDIS ── Langfuse v3 event queue ───────────────────────────────────
   redis:
