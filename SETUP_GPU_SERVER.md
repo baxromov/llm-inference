@@ -159,34 +159,21 @@ wget "$DRIVER_URL"
 chmod +x "NVIDIA-Linux-x86_64-${DRIVER_VER}.run"
 ```
 
-**Step 3 — Install with GCC 12 (required on Trixie — GCC 14 breaks NVIDIA module build):**
+**Step 3 — Install with explicit GCC path:**
+
+The NVIDIA installer auto-detects which GCC compiled the PVE kernel (gcc-12) and tries to use
+it. But **gcc-12 is not available in Trixie**. Override with the system GCC (gcc-14) explicitly:
 
 ```bash
-# Trixie ships GCC 14 by default — NVIDIA 570 kernel module fails to compile with it.
-# GCC 12 is required.
-apt install -y gcc-12
-
-# Explicit kernel source path + GCC 12
-CC=gcc-12 ./NVIDIA-Linux-x86_64-${DRIVER_VER}.run \
+# CC=/usr/bin/gcc forces gcc-14 (the installed version) instead of auto-detected gcc-12
+CC=/usr/bin/gcc ./NVIDIA-Linux-x86_64-${DRIVER_VER}.run \
   --no-x-check \
   --no-opengl-files \
   --kernel-source-path=/usr/src/linux-headers-$(uname -r) \
-  --silent \
-  --dkms
-```
+  --dkms 2>&1 | tee /tmp/nvidia-install.log
 
-If it still fails, run **without `--silent`** to see the exact compiler error:
-
-```bash
-CC=gcc-12 ./NVIDIA-Linux-x86_64-${DRIVER_VER}.run \
-  --no-x-check \
-  --no-opengl-files \
-  --kernel-source-path=/usr/src/linux-headers-$(uname -r) \
-  --dkms \
-  2>&1 | tee /tmp/nvidia-build.log
-
-# Then check the log:
-tail -80 /var/log/nvidia-installer.log
+# Watch for: "Installation of the NVIDIA Accelerated Graphics Driver... is now complete."
+tail -20 /tmp/nvidia-install.log
 ```
 
 > `--dkms` registers the module so it recompiles automatically after kernel updates.
@@ -592,25 +579,21 @@ apt update
 apt install -y nvidia-container-toolkit
 ```
 
-### `.run` installer fails: "Building kernel modules" error
+### `.run` installer fails: "CC sanity check failed" / gcc-12 not found
 
-Debian Trixie ships GCC 14 by default. NVIDIA 570 kernel module fails to compile with GCC 14.
+The NVIDIA installer reads the GCC version that compiled the PVE kernel and tries to use it.
+The PVE `7.0.6-2-pve` kernel was built with **gcc-12**, but gcc-12 does not exist in Trixie.
+
+Fix: override `CC` to point to the available system GCC (gcc-14):
 
 ```bash
-# Step 1: check exact error
-tail -80 /var/log/nvidia-installer.log
-
-# Step 2: install GCC 12 and retry with explicit kernel path
-apt install -y gcc-12
-
-CC=gcc-12 /tmp/NVIDIA-Linux-x86_64-570.86.15.run \
+CC=/usr/bin/gcc /tmp/NVIDIA-Linux-x86_64-570.86.15.run \
   --no-x-check \
   --no-opengl-files \
   --kernel-source-path=/usr/src/linux-headers-$(uname -r) \
-  --silent \
-  --dkms
+  --dkms 2>&1 | tee /tmp/nvidia-install.log
 
-# Verify after success:
+tail -20 /tmp/nvidia-install.log
 dkms status
 nvidia-smi
 ```
