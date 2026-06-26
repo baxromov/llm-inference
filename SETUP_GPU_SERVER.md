@@ -92,55 +92,73 @@ echo "options nouveau modeset=0" >> /etc/modprobe.d/blacklist-nouveau.conf
 update-initramfs -u
 ```
 
-### 2d. Install NVIDIA driver — Method A: Trixie native package (try this first)
+### 2d. Install NVIDIA driver — Method A: Trixie native package (check availability first)
 
-Now that sources.list uses correct Trixie repos, the native `nvidia-driver` package should
-install without libglvnd conflicts (those only happened when Bullseye repos were mixed in).
+The package names vary across Debian versions. Always check what's actually in the repo first:
 
 ```bash
-# --no-install-recommends skips xserver-xorg-video-nvidia and other X11 packages
-# (this is a headless server — no display needed)
-apt install -y --no-install-recommends \
-  nvidia-driver \
-  nvidia-smi \
-  nvidia-kernel-dkms
+# Search for available NVIDIA packages in the configured repos
+apt-cache search nvidia | grep -iE "(driver|dkms|kernel)" | sort
 ```
 
-> If this succeeds, skip Method B and jump to step 2e (Reboot).
+If you see `nvidia-driver` in the output, install it:
+
+```bash
+# --no-install-recommends skips X11/xserver packages (headless server)
+apt install -y --no-install-recommends nvidia-driver
+```
+
+Common alternative package names in Trixie — try if `nvidia-driver` is not found:
+
+```bash
+# Option 1: versioned meta-package (e.g. 570, 550, 535 — use the version shown by apt-cache search)
+apt install -y --no-install-recommends nvidia-driver-570
+
+# Option 2: just the kernel module + userspace utils
+apt install -y nvidia-kernel-dkms nvidia-driver-libs nvidia-open
+
+# Option 3: check exact package name interactively
+apt-cache search nvidia | grep -i "nvidia-driver" | awk '{print $1}'
+```
+
+> If Method A installs without errors, skip Method B and jump to step 2e (Reboot).
 
 ---
 
-### 2d-alt. Install NVIDIA driver — Method B: Official .run installer (if apt fails)
+### 2d-alt. Install NVIDIA driver — Method B: Official .run installer (most reliable for PVE)
 
-Use this if Method A fails for any reason (package unavailable, dependency issues, etc.).
-The `.run` installer bypasses apt entirely and compiles the module directly against PVE headers.
+The `.run` installer bypasses apt entirely — no package name issues, no SHA1/sqv conflicts,
+compiles directly against the installed PVE kernel headers.
 
-**Step 1 — Find the correct driver URL:**
+**Step 1 — Auto-find a working driver URL:**
 
-Go to https://www.nvidia.com/en-us/drivers/unix/ and find the latest
-**Data Center / Tesla** driver for Linux x86_64. The URL format is:
-```
-https://us.download.nvidia.com/tesla/{VERSION}/NVIDIA-Linux-x86_64-{VERSION}.run
-```
-
-Or use NVIDIA's driver search API to get the latest version for A100:
 ```bash
-# This prints the latest recommended Tesla driver version for A100
-curl -s "https://www.nvidia.com/Download/API/lookupValueSearch.aspx?TypeID=1&ProductSeriesID=132&ProductID=928&OSID=1&LanguageCode=1033" \
-  | grep -o 'Version=[0-9.]*' | head -1
+cd /tmp
+
+# This script tries known Tesla driver versions until one is found on NVIDIA's servers
+for VER in 570.86.15 565.57.01 550.127.05 550.90.07 535.183.06; do
+  URL="https://us.download.nvidia.com/tesla/${VER}/NVIDIA-Linux-x86_64-${VER}.run"
+  STATUS=$(curl -o /dev/null -s -w "%{http_code}" --head "$URL")
+  if [ "$STATUS" = "200" ]; then
+    echo "✓ Found: $URL"
+    DRIVER_URL="$URL"
+    DRIVER_VER="$VER"
+    break
+  else
+    echo "✗ Not found: ${VER} (HTTP ${STATUS})"
+  fi
+done
+
+echo "Will download: $DRIVER_URL"
 ```
 
 **Step 2 — Download and install:**
 
 ```bash
-cd /tmp
+wget "$DRIVER_URL"
+chmod +x "NVIDIA-Linux-x86_64-${DRIVER_VER}.run"
 
-# Replace VERSION with the actual version found above (e.g. 550.90.07, 565.57.01)
-DRIVER_VERSION="550.90.07"   # ← change this to the real version
-wget "https://us.download.nvidia.com/tesla/${DRIVER_VERSION}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run"
-chmod +x "NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run"
-
-./NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run \
+./NVIDIA-Linux-x86_64-${DRIVER_VER}.run \
   --no-x-check \
   --no-opengl-files \
   --silent \
@@ -148,7 +166,7 @@ chmod +x "NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run"
 ```
 
 > `--dkms` registers the module so it recompiles automatically after kernel updates.
-> `--no-opengl-files` skips X11/OpenGL (not needed on a headless server).
+> `--no-opengl-files` skips X11/OpenGL — not needed on a headless GPU server.
 > Takes ~5–10 minutes to compile the kernel module.
 
 ---
@@ -527,16 +545,18 @@ apt install -y cuda-drivers
 Debian Trixie's Sequoia PGP (`sqv`) rejects SHA1-signed repos since 2026-02-01.
 NVIDIA's CUDA apt repo is affected. Solutions:
 
-**For NVIDIA driver:** Use Trixie native package first (Method A in Section 2d):
+**For NVIDIA driver:** First check what's actually available in apt:
 ```bash
-apt install -y --no-install-recommends nvidia-driver nvidia-smi nvidia-kernel-dkms
+apt-cache search nvidia | grep -iE "(driver|dkms|kernel)" | sort
 ```
-
-If that fails, find the correct `.run` URL from https://www.nvidia.com/en-us/drivers/unix/
-and use Method B (Section 2d-alt). Do NOT hardcode a version — verify it exists first:
+Then install the package name shown. If `nvidia-driver` isn't found, use Method B (Section 2d-alt)
+with the auto-find script which probes multiple known versions until it gets HTTP 200:
 ```bash
-DRIVER_VERSION="550.90.07"  # verify this version exists before running
-wget "https://us.download.nvidia.com/tesla/${DRIVER_VERSION}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run"
+for VER in 570.86.15 565.57.01 550.127.05 550.90.07 535.183.06; do
+  URL="https://us.download.nvidia.com/tesla/${VER}/NVIDIA-Linux-x86_64-${VER}.run"
+  STATUS=$(curl -o /dev/null -s -w "%{http_code}" --head "$URL")
+  [ "$STATUS" = "200" ] && echo "✓ Use: $URL" && break || echo "✗ ${VER} (${STATUS})"
+done
 ```
 
 **For nvidia-container-toolkit** — add repo with `[trusted=yes]`:
