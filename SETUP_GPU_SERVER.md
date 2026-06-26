@@ -51,55 +51,40 @@ lspci | grep -i nvidia
 
 ## 2. Install NVIDIA Drivers
 
-> **PVE 9 / Debian Trixie specific:** Do NOT use Debian Bullseye or Bookworm repos — they cause
-> `libglvnd0` version conflicts. Use NVIDIA's own CUDA network repo which carries headless drivers
-> without any X11 dependency.
+> **Do you need CUDA on the host?** No. Docker containers (Ollama, Infinity) carry their own
+> CUDA runtime inside the image. The host only needs:
+> 1. The **NVIDIA kernel driver** (so the OS can talk to the GPU hardware)
+> 2. **nvidia-container-toolkit** (so Docker can pass GPUs into containers)
+> That's it. No CUDA toolkit, no nvcc needed on the host.
+
+> **PVE 9 / Debian Trixie specific issues encountered:**
+> - `nvidia-driver` from Debian repos → `libglvnd0` version conflict (fixed by using Trixie repos)
+> - NVIDIA CUDA apt repo → SHA1 signature rejected by Trixie's sqv since 2026-02-01
+>
+> **Solution:** Use NVIDIA's `.run` installer — bypasses apt and the SHA1/sqv issue entirely.
+> This is also NVIDIA's recommended approach for servers with custom kernels (like PVE).
 
 ### 2a. Fix sources.list — use Trixie repos only
 
 ```bash
-# Replace anything that was added before with the correct Trixie repos
 cat > /etc/apt/sources.list << 'EOF'
 deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware
 deb http://deb.debian.org/debian trixie-updates main contrib non-free non-free-firmware
 deb http://security.debian.org/debian-security trixie-security main contrib non-free non-free-firmware
 EOF
 
-# Proxmox repo stays untouched in /etc/apt/sources.list.d/pve*.list
+# Proxmox repo stays untouched in /etc/apt/sources.list.d/
 apt update
 ```
 
-### 2b. Install PVE kernel headers
+### 2b. Install PVE kernel headers and build tools
 
 ```bash
 # 'pve-headers-*' is an alias — apt resolves it to 'proxmox-headers-*' automatically
-apt install -y pve-headers-$(uname -r)
+apt install -y pve-headers-$(uname -r) build-essential dkms
 ```
 
-### 2c. Add NVIDIA CUDA network repo (Debian 12 packages work on Trixie)
-
-```bash
-cd /tmp
-wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb
-dpkg -i cuda-keyring_1.1-1_all.deb
-apt update
-```
-
-### 2d. Install NVIDIA drivers via cuda-drivers (headless — no X11)
-
-```bash
-# cuda-drivers installs: kernel module (via DKMS) + nvidia-smi + userspace libs
-# No X11 / xserver packages → no libglvnd conflict
-apt install -y cuda-drivers
-```
-
-> This compiles the NVIDIA kernel module against the PVE headers via DKMS.
-> Takes 5–10 minutes. Watch progress:
-> ```bash
-> dkms status   # should show: nvidia/xxx: added
-> ```
-
-### 2e. Disable Nouveau
+### 2c. Disable Nouveau (before installing NVIDIA driver)
 
 ```bash
 echo "blacklist nouveau" > /etc/modprobe.d/blacklist-nouveau.conf
@@ -107,13 +92,37 @@ echo "options nouveau modeset=0" >> /etc/modprobe.d/blacklist-nouveau.conf
 update-initramfs -u
 ```
 
-### 2f. Reboot
+### 2d. Download and run the NVIDIA driver installer
+
+> Use the **Data Center / Tesla** driver for A100 (not GeForce).
+> Check the latest version at: https://www.nvidia.com/en-us/drivers/unix/
+
+```bash
+cd /tmp
+
+# Tesla/Data Center driver 570.x — current recommended for A100
+wget https://us.download.nvidia.com/tesla/570.133.07/NVIDIA-Linux-x86_64-570.133.07.run
+chmod +x NVIDIA-Linux-x86_64-570.133.07.run
+
+# Install: headless (no X11), silent, register with DKMS so it survives kernel updates
+./NVIDIA-Linux-x86_64-570.133.07.run \
+  --no-x-check \
+  --no-opengl-files \
+  --silent \
+  --dkms
+```
+
+> `--dkms` registers the module with DKMS so it automatically recompiles after kernel updates.
+> `--no-opengl-files` skips X11/OpenGL (not needed on a headless GPU server).
+> Takes ~5 minutes to compile the kernel module.
+
+### 2e. Reboot
 
 ```bash
 reboot
 ```
 
-### 2g. Verify drivers loaded
+### 2f. Verify
 
 ```bash
 nvidia-smi
@@ -122,7 +131,7 @@ nvidia-smi
 Expected output:
 ```
 +-----------------------------------------------------------------------------+
-| NVIDIA-SMI 570.xx   Driver Version: 570.xx   CUDA Version: 12.x            |
+| NVIDIA-SMI 570.133.07  Driver Version: 570.133.07  CUDA Version: 12.x      |
 |-------------------------------+----------------------+----------------------+
 | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC|
 |   0  A100 SXM4 80GB Off      | 00000000:0B:00.0 Off |                  Off |
@@ -130,34 +139,37 @@ Expected output:
 +-----------------------------------------------------------------------------+
 ```
 
----
-
-## 3. Install CUDA Toolkit
-
-`cuda-drivers` (step 2) already installs the NVIDIA driver. Now add the full CUDA toolkit for host-level tooling:
-
+Check DKMS module is registered (important for surviving kernel updates):
 ```bash
-# CUDA toolkit only — driver already installed via cuda-drivers
-apt install -y cuda-toolkit-12-6
+dkms status
+# expected: nvidia/570.133.07, 7.0.6-2-pve, x86_64: installed
 ```
 
-Add to PATH:
+---
+
+## 3. CUDA Toolkit (Optional — not needed for Docker inference)
+
+The CUDA toolkit (`nvcc`, etc.) is **not required** for running the LLM inference stack.
+Docker containers carry their own CUDA runtime. Skip this section unless you need host-level
+CUDA tools for debugging.
+
+If you do want it for development/debugging:
 
 ```bash
+# Download CUDA toolkit .run installer (avoid apt due to SHA1/sqv issue on Trixie)
+cd /tmp
+wget https://developer.download.nvidia.com/compute/cuda/12.6.0/local_installers/cuda_12.6.0_560.28.03_linux.run
+chmod +x cuda_12.6.0_560.28.03_linux.run
+
+# Install toolkit only — driver is already installed
+./cuda_12.6.0_560.28.03_linux.run --silent --toolkit --no-drm
+
 echo 'export PATH=/usr/local/cuda/bin:$PATH' >> /root/.bashrc
 echo 'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH' >> /root/.bashrc
 source /root/.bashrc
+
+nvcc --version
 ```
-
-Verify:
-
-```bash
-nvcc --version   # CUDA compiler version
-nvidia-smi       # driver + CUDA version confirmed
-```
-
-> Docker containers bring their own CUDA libraries — the host toolkit is only needed for
-> host-level debugging tools like `nvtop`, `cuda-samples`, etc.
 
 ---
 
@@ -199,13 +211,16 @@ docker compose version        # Docker Compose version 2+
 
 This allows Docker containers to access the NVIDIA GPUs.
 
+> The nvidia-container-toolkit apt repo may also fail signature verification on Trixie (same SHA1 issue).
+> Use `[trusted=yes]` to bypass — acceptable on a controlled on-prem server.
+
 ```bash
-# Add NVIDIA container toolkit repo
+# Add NVIDIA container toolkit repo with trusted=yes (bypasses SHA1/sqv issue on Trixie)
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
   gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
 
 curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  sed 's#deb https://#deb [trusted=yes] https://#g' | \
   tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
 
 apt update
@@ -470,6 +485,26 @@ apt update
 apt install -y cuda-drivers
 ```
 
+### NVIDIA apt repo rejected: `SHA1 is not considered secure` (Trixie sqv policy)
+
+Debian Trixie's Sequoia PGP (`sqv`) rejects SHA1-signed repos since 2026-02-01.
+Both NVIDIA's CUDA repo and container toolkit repo are affected. **Solution: use `.run` installer.**
+
+```bash
+# For NVIDIA driver — use .run installer (Section 2d above)
+cd /tmp
+wget https://us.download.nvidia.com/tesla/570.133.07/NVIDIA-Linux-x86_64-570.133.07.run
+chmod +x NVIDIA-Linux-x86_64-570.133.07.run
+./NVIDIA-Linux-x86_64-570.133.07.run --no-x-check --no-opengl-files --silent --dkms
+
+# For nvidia-container-toolkit — add repo with [trusted=yes] to skip verification
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+  sed 's#deb https://#deb [trusted=yes] https://#g' | \
+  tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+apt update
+apt install -y nvidia-container-toolkit
+```
+
 ### `nvidia-smi: command not found` after reboot
 
 ```bash
@@ -479,8 +514,9 @@ dkms status
 # Check if module is loaded
 lsmod | grep nvidia
 
-# If not loaded, reinstall
-apt install --reinstall cuda-drivers
+# If not loaded — re-run the .run installer
+cd /tmp
+./NVIDIA-Linux-x86_64-570.133.07.run --no-x-check --no-opengl-files --silent --dkms
 reboot
 ```
 
