@@ -1,36 +1,65 @@
-root@gpusrv02:~# apt install -y nvidia-container-toolkit
-nvidia-container-toolkit is already the newest version (1.19.1-1).
-Summary:
-  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 40
-root@gpusrv02:~# nvidia-ctk runtime configure --runtime=docker
-INFO[0000] Loading config from /etc/docker/daemon.json
-INFO[0000] Wrote updated config to /etc/docker/daemon.json
-INFO[0000] It is recommended that docker daemon be restarted.
-root@gpusrv02:~# nvidia-smi
-Fri Jun 26 16:43:01 2026
-+-----------------------------------------------------------------------------------------+
-| NVIDIA-SMI 550.163.01             Driver Version: 550.163.01     CUDA Version: N/A      |
-|-----------------------------------------+------------------------+----------------------+
-| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
-|                                         |                        |               MIG M. |
-|=========================================+========================+======================|
-|   0  NVIDIA A100-SXM4-80GB          Off |   00000000:0B:00.0 Off |                    0 |
-| N/A   35C    P0             63W /  400W |       1MiB /  81920MiB |      0%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-|   1  NVIDIA A100-SXM4-80GB          Off |   00000000:48:00.0 Off |                    0 |
-| N/A   36C    P0             69W /  400W |       1MiB /  81920MiB |      3%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
+root@gpusrv02:/opt/llm-inference# HF_AUTO_DOWNLOAD=1 ./deploy.sh
 
-+-----------------------------------------------------------------------------------------+
-| Processes:                                                                              |
-|  GPU   GI   CI        PID   Type   Process name                              GPU Memory |
-|        ID   ID                                                               Usage      |
-|=========================================================================================|
-|  No running processes found                                                             |
-+-----------------------------------------------------------------------------------------+
-root@gpusrv02:~# systemctl restart docker
-``
-root@gpusrv02:~#
+╔══════════════════════════════════════════════════════╗
+║        LLM Inference Stack — Deploy                 ║
+╚══════════════════════════════════════════════════════╝
+
+▶ Checking prerequisites
+[OK]  Docker 29.6.0
+.[OK]  Python 3.13.5
+[OK]  PyYAML available
+[OK]  Found 2 GPU(s):
+       0, NVIDIA A100-SXM4-80GB, 81920 MiB
+       1, NVIDIA A100-SXM4-80GB, 81920 MiB
+
+▶ Configuring environment
+[OK]  .env configured
+
+▶ Rendering configs from models.yaml
+Rendering configs from models.yaml ...
+  [OK] litellm/config.yaml
+  [OK] ollama/init-models.sh
+  [OK] infinity/entrypoint.sh
+
+Done. Apply changes with:
+  docker compose restart litellm          # after chat/embedding/reranker changes
+  docker compose restart infinity         # after embedding/reranker changes
+  docker compose restart ollama-init      # to pull new Ollama models
+
+▶ Writing Prometheus auth token
+[OK]  prometheus/litellm_token written
+
+▶ Checking embedding / reranker model files
+  [!!]  2 model(s) not found locally:
+         • BAAI/bge-m3
+         • BAAI/bge-reranker-v2-m3
+/usr/bin/python3: No module named pip
+Traceback (most recent call last):
+  File "<stdin>", line 25, in <module>
+  File "/usr/lib/python3.13/subprocess.py", line 414, in check_call
+    retcode = call(*popenargs, **kwargs)
+  File "/usr/lib/python3.13/subprocess.py", line 395, in call
+    with Popen(*popenargs, **kwargs) as p:
+         ~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 1039, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        pass_fds, cwd, env,
+                        ^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+                        gid, gids, uid, umask,
+                        ^^^^^^^^^^^^^^^^^^^^^^
+                        start_new_session, process_group)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 1972, in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+FileNotFoundError: [Errno 2] No such file or directory: 'huggingface-cli'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<stdin>", line 27, in <module>
+  File "/usr/lib/python3.13/subprocess.py", line 419, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command '['/usr/bin/python3', '-m', 'pip', 'install', 'huggingface-hub', '-q']' returned non-zero exit status 1.
+root@gpusrv02:/opt/llm-inference# .
