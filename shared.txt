@@ -1,0 +1,42 @@
+Windows PowerShell
+(C) Корпорация Майкрософт (Microsoft Corporation). Все права защищены.
+
+Установите последнюю версию PowerShell для новых функций и улучшения! https://aka.ms/PSWindows
+
+PS C:\Users\bakhromovshb> ssh root@172.31.230.3
+Linux gpusrv02.local 7.0.6-2-pve #1 SMP PREEMPT_DYNAMIC PMX 7.0.6-2 (2026-05-29T11:08Z) x86_64
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+Last login: Fri Jun 26 14:20:58 2026 from 192.168.41.32
+root@gpusrv02:~# lspci | grep -i vga
+61:00.1 VGA compatible controller: Matrox Electronics Systems Ltd. MGA G200eH3 (rev 02)
+root@gpusrv02:~# lspci | grep -i nvidia
+0b:00.0 3D controller: NVIDIA Corporation GA100 [A100 SXM4 80GB] (rev a1)
+48:00.0 3D controller: NVIDIA Corporation GA100 [A100 SXM4 80GB] (rev a1)
+a9:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
+aa:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
+ab:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
+ac:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
+ad:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
+ae:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
+root@gpusrv02:~# lspci | grep -i nvidia
+lspci | grep -i vga
+``
+0b:00.0 3D controller: NVIDIA Corporation GA100 [A100 SXM4 80GB] (rev a1)
+48:00.0 3D controller: NVIDIA Corporation GA100 [A100 SXM4 80GB] (rev a1)
+a9:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
+aa:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
+ab:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
+ac:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
+ad:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
+ae:00.0 Bridge: NVIDIA Corporation GA100 [A100 NVSwitch] (rev a1)
+61:00.1 VGA compatible controller: Matrox Electronics Systems Ltd. MGA G200eH3 (rev 02)
+root@gpusrv02:~# nvidia-smi
+``
+-bash: nvidia-smi: command not found
+root@gpusrv02:~#
