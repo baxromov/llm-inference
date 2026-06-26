@@ -1,78 +1,79 @@
-root@gpusrv02:~# apt-cache search nvidia | grep -iE "(driver|dkms|kernel)" | sort
-vdpau-driver-all - Video Decode and Presentation API for Unix (driver metapackage)
-root@gpusrv02:~# # Search for available NVIDIA packages in the configured repos
-apt-cache search nvidia | grep -iE "(driver|dkms|kernel)" | sort
-vdpau-driver-all - Video Decode and Presentation API for Unix (driver metapackage)
-root@gpusrv02:~# # --no-install-recommends skips X11/xserver packages (headless server)
-apt install -y --no-install-recommends nvidia-driver
-Error: Unable to locate package nvidia-driver
-root@gpusrv02:~# # Option 1: versioned meta-package (e.g. 570, 550, 535 — use the version shown by apt-cache search)
-apt install -y --no-install-recommends nvidia-driver-570
+root@gpusrv02:/tmp# # Trixie ships GCC 14 by default — NVIDIA 570 kernel module fails to compile with it.
+# GCC 12 is required.
+apt install -y gcc-12
 
-# Option 2: just the kernel module + userspace utils
-apt install -y nvidia-kernel-dkms nvidia-driver-libs nvidia-open
-
-# Option 3: check exact package name interactively
-apt-cache search nvidia | grep -i "nvidia-driver" | awk '{print $1}'
-Error: Unable to locate package nvidia-driver-570
-Package nvidia-kernel-dkms is not available, but is referred to by another package.
-This may mean that the package is missing, has been obsoleted, or
-is only available from another source
-
-Error: Package 'nvidia-kernel-dkms' has no installation candidate
-Error: Unable to locate package nvidia-driver-libs
-Error: Unable to locate package nvidia-open
-root@gpusrv02:~# cd /tmp
-
-# This script tries known Tesla driver versions until one is found on NVIDIA's servers
-for VER in 570.86.15 565.57.01 550.127.05 550.90.07 535.183.06; do
-  URL="https://us.download.nvidia.com/tesla/${VER}/NVIDIA-Linux-x86_64-${VER}.run"
-  STATUS=$(curl -o /dev/null -s -w "%{http_code}" --head "$URL")
-  if [ "$STATUS" = "200" ]; then
-    echo "✓ Found: $URL"
-    DRIVER_URL="$URL"
-    DRIVER_VER="$VER"
-    break
-  else
-    echo "✗ Not found: ${VER} (HTTP ${STATUS})"
-  fi
-done
-
-echo "Will download: $DRIVER_URL"
-✓ Found: https://us.download.nvidia.com/tesla/570.86.15/NVIDIA-Linux-x86_64-570.86.15.run
-Will download: https://us.download.nvidia.com/tesla/570.86.15/NVIDIA-Linux-x86_64-570.86.15.run
-root@gpusrv02:/tmp# wget "$DRIVER_URL"
-chmod +x "NVIDIA-Linux-x86_64-${DRIVER_VER}.run"
-
-./NVIDIA-Linux-x86_64-${DRIVER_VER}.run \
+# Explicit kernel source path + GCC 12
+CC=gcc-12 ./NVIDIA-Linux-x86_64-${DRIVER_VER}.run \
   --no-x-check \
   --no-opengl-files \
+  --kernel-source-path=/usr/src/linux-headers-$(uname -r) \
   --silent \
   --dkms
---2026-06-26 15:11:17--  https://us.download.nvidia.com/tesla/570.86.15/NVIDIA-Linux-x86_64-570.86.15.run
-Resolving us.download.nvidia.com (us.download.nvidia.com)... 2.16.172.200, 2.16.172.240
-Connecting to us.download.nvidia.com (us.download.nvidia.com)|2.16.172.200|:443... connected.
-HTTP request sent, awaiting response... 200 OK
-Length: 375502111 (358M) [application/octet-stream]
-Saving to: ‘NVIDIA-Linux-x86_64-570.86.15.run’
-
-NVIDIA-Linux-x86_64-570.86.15.run                    100%[===================================================================================================================>] 358.11M  4.41MB/s    in 80s
-
-2026-06-26 15:12:39 (4.49 MB/s) - ‘NVIDIA-Linux-x86_64-570.86.15.run’ saved [375502111/375502111]
-
+Error: Unable to locate package gcc-12
 Verifying archive integrity... OK
 Uncompressing NVIDIA Accelerated Graphics Driver for Linux-x86_64 570.86.15.......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
 
-ERROR: An error occurred while performing the step: "Building kernel modules". See /var/log/nvidia-installer.log for details.
+ERROR: The CC sanity check failed:
 
+       The C compiler 'gcc-12' does not appear to be able to
+       create object files.  Please make sure you have
+       your Linux distribution's libc development package
+       installed and that 'gcc-12' is a valid C compiler
+       name.
 
-ERROR: An error occurred while performing the step: "Checking to see whether the nvidia kernel module was successfully built". See /var/log/nvidia-installer.log for details.
+root@gpusrv02:/tmp# nvidia-smi
+-bash: nvidia-smi: command not found
+root@gpusrv02:/tmp# # Trixie ships GCC 14 by default — NVIDIA 570 kernel module fails to compile with it.
+# GCC 12 is required.
+apt install -y gcc-12
 
+# Explicit kernel source path + GCC 12
+CC=gcc-12 ./NVIDIA-Linux-x86_64-${DRIVER_VER}.run \
+  --no-x-check \
+  --no-opengl-files \
+  --kernel-source-path=/usr/src/linux-headers-$(uname -r) \
+  --silent \
+  --dkms
+Error: Unable to locate package gcc-12
+Verifying archive integrity... OK
+Uncompressing NVIDIA Accelerated Graphics Driver for Linux-x86_64 570.86.15.......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
 
-ERROR: The nvidia kernel module was not created.
+ERROR: The CC sanity check failed:
 
+       The C compiler 'gcc-12' does not appear to be able to
+       create object files.  Please make sure you have
+       your Linux distribution's libc development package
+       installed and that 'gcc-12' is a valid C compiler
+       name.
 
-ERROR: Installation has failed.  Please see the file '/var/log/nvidia-installer.log' for details.  You may find suggestions on fixing installation problems in the README available on the Linux driver download
-       page at www.nvidia.com.
+root@gpusrv02:/tmp# tail -80 /var/log/nvidia-installer.log
+nvidia-installer log file '/var/log/nvidia-installer.log'
+creation time: Fri Jun 26 15:16:28 2026
+installer version: 570.86.15
 
+PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+nvidia-installer command line:
+    ./nvidia-installer
+    --no-x-check
+    --no-opengl-files
+    --kernel-source-path=/usr/src/linux-headers-7.0.6-2-pve
+    --silent
+    --dkms
+
+Using built-in stream user interface
+-> Detected 128 CPUs online; setting concurrency level to 32.
+-> Scanning the initramfs with lsinitramfs...
+-> Executing: /usr/bin/lsinitramfs   -l /boot/initrd.img-7.0.6-2-pve
+-> Multiple kernel module types are available for this system. Which would you like to use? (Answer: MIT/GPL)
+-> Installing NVIDIA driver version 570.86.15.
+-> Performing CC sanity check with CC="gcc-12".
+-> Performing CC check.
+ERROR: The CC sanity check failed:
+
+The C compiler 'gcc-12' does not appear to be able to
+create object files.  Please make sure you have
+your Linux distribution's libc development package
+installed and that 'gcc-12' is a valid C compiler
+name.
 root@gpusrv02:/tmp#
