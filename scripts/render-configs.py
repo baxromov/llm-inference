@@ -72,15 +72,14 @@ def render_litellm_config(models: dict) -> None:
     if embedding_models:
         lines.append("\n  # ── EMBEDDING models via Infinity ────────────────────────────────────\n")
         for m in embedding_models:
-            served = m["local_path"]
             lines.append(f"\n  - model_name: {m['name']}\n")
             lines.append(f"    litellm_params:\n")
-            lines.append(f"      model: openai/{served}\n")
+            lines.append(f"      model: openai/{m['name']}\n")
             lines.append(f"      api_base: http://infinity:7997/v1\n")
             for alias in m.get("aliases", []):
                 lines.append(f"\n  - model_name: {alias}\n")
                 lines.append(f"    litellm_params:\n")
-                lines.append(f"      model: openai/{served}\n")
+                lines.append(f"      model: openai/{m['name']}\n")
                 lines.append(f"      api_base: http://infinity:7997/v1\n")
 
     # Reranker models (via Infinity)
@@ -88,15 +87,14 @@ def render_litellm_config(models: dict) -> None:
     if reranker_models:
         lines.append("\n  # ── RERANKER models via Infinity ─────────────────────────────────────\n")
         for m in reranker_models:
-            served = m["local_path"]
             lines.append(f"\n  - model_name: {m['name']}\n")
             lines.append(f"    litellm_params:\n")
-            lines.append(f"      model: openai/{served}\n")
+            lines.append(f"      model: openai/{m['name']}\n")
             lines.append(f"      api_base: http://infinity:7997/v1\n")
             for alias in m.get("aliases", []):
                 lines.append(f"\n  - model_name: {alias}\n")
                 lines.append(f"    litellm_params:\n")
-                lines.append(f"      model: openai/{served}\n")
+                lines.append(f"      model: openai/{m['name']}\n")
                 lines.append(f"      api_base: http://infinity:7997/v1\n")
 
     lines.append("\n")
@@ -158,8 +156,8 @@ def render_infinity_entrypoint(models: dict) -> None:
     ]
 
     for m in all_models:
-        local_path = m["local_path"]
-        lines.append(f'  --served-model-name "{local_path}" \\\n')
+        lines.append(f'  --model-id "{m["local_path"]}" \\\n')
+        lines.append(f'  --served-model-name "{m["name"]}" \\\n')
 
     lines.append(f"  --port {port} \\\n")
     lines.append(f"  --engine {engine} \\\n")
