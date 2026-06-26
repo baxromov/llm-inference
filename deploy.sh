@@ -170,7 +170,14 @@ if os.environ.get('HF_AUTO_DOWNLOAD', '0') == '1':
         venv_cli = venv_dir / 'bin' / 'huggingface-cli'
         if not venv_cli.exists():
             print("  huggingface-cli not found — creating local venv (.hf-venv) ...")
-            subprocess.check_call([sys.executable, '-m', 'venv', str(venv_dir)])
+            try:
+                subprocess.check_call([sys.executable, '-m', 'venv', str(venv_dir)])
+            except subprocess.CalledProcessError:
+                # python3-venv not installed (Debian/Ubuntu) — install it
+                pkg = f"python3.{sys.version_info.minor}-venv"
+                print(f"  python3-venv missing — running: apt install -y {pkg}")
+                subprocess.check_call(['apt', 'install', '-y', pkg])
+                subprocess.check_call([sys.executable, '-m', 'venv', str(venv_dir)])
             subprocess.check_call([str(venv_dir / 'bin' / 'pip'), 'install',
                                     'huggingface-hub[cli]', '-q'])
         hf_cli = str(venv_cli)
