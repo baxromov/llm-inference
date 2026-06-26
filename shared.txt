@@ -28,4 +28,85 @@ make[1]: Leaving directory '/usr/src/linux-headers-7.0.6-2-pve'
 make: *** [Makefile:115: modules] Error 2
 ERROR: The nvidia kernel module was not created.
 ERROR: Installation has failed.  Please see the file '/var/log/nvidia-installer.log' for details.  You may find suggestions on fixing installation problems in the README available on the Linux driver download page at www.nvidia.com.
+root@gpusrv02:/tmp# tail -80 /var/log/nvidia-installer.log
+compilation terminated.
+make[4]: *** [/usr/src/linux-headers-7.0.6-2-pve/scripts/Makefile.build:289: nvidia/libspdm_hkdf.o] Error 1
+In file included from nvidia/libspdm_shash.c:24:
+nvidia/internal_crypt_lib.h:32:10: fatal error: conftest.h: No such file or directory
+   32 | #include "conftest.h"
+      |          ^~~~~~~~~~~~
+compilation terminated.
+make[4]: *** [/usr/src/linux-headers-7.0.6-2-pve/scripts/Makefile.build:289: nvidia/libspdm_shash.o] Error 1
+nvidia/nvlink_linux.c:24:10: fatal error: conftest.h: No such file or directory
+   24 | #include "conftest.h"
+      |          ^~~~~~~~~~~~
+compilation terminated.
+make[4]: *** [/usr/src/linux-headers-7.0.6-2-pve/scripts/Makefile.build:289: nvidia/nvlink_linux.o] Error 1
+In file included from nvidia/nvlink_os.h:31,
+                 from nvidia/nvlink_caps.c:24:
+nvidia/nvlink_common.h:31:10: fatal error: nvtypes.h: No such file or directory
+   31 | #include "nvtypes.h"
+      |          ^~~~~~~~~~~
+compilation terminated.
+make[4]: *** [/usr/src/linux-headers-7.0.6-2-pve/scripts/Makefile.build:289: nvidia/nvlink_caps.o] Error 1
+In file included from nvidia/linux_nvswitch.c:24:
+nvidia/linux_nvswitch.h:27:10: fatal error: nvmisc.h: No such file or directory
+   27 | #include "nvmisc.h"
+      |          ^~~~~~~~~~
+compilation terminated.
+make[4]: *** [/usr/src/linux-headers-7.0.6-2-pve/scripts/Makefile.build:289: nvidia/linux_nvswitch.o] Error 1
+In file included from nvidia/procfs_nvswitch.c:24:
+nvidia/linux_nvswitch.h:27:10: fatal error: nvmisc.h: No such file or directory
+   27 | #include "nvmisc.h"
+      |          ^~~~~~~~~~
+compilation terminated.
+In file included from nvidia/i2c_nvswitch.c:24:
+nvidia/linux_nvswitch.h:27:10: fatal error: nvmisc.h: No such file or directory
+   27 | #include "nvmisc.h"
+      |          ^~~~~~~~~~
+compilation terminated.
+make[4]: *** [/usr/src/linux-headers-7.0.6-2-pve/scripts/Makefile.build:289: nvidia/procfs_nvswitch.o] Error 1
+make[4]: *** [/usr/src/linux-headers-7.0.6-2-pve/scripts/Makefile.build:289: nvidia/i2c_nvswitch.o] Error 1
+nvidia/nv-nano-timer.c:30:10: fatal error: os-interface.h: No such file or directory
+   30 | #include "os-interface.h"
+      |          ^~~~~~~~~~~~~~~~
+compilation terminated.
+make[4]: *** [/usr/src/linux-headers-7.0.6-2-pve/scripts/Makefile.build:289: nvidia/nv-nano-timer.o] Error 1
+nvidia/nv.c:30:10: fatal error: nv-firmware.h: No such file or directory
+   30 | #include "nv-firmware.h"
+      |          ^~~~~~~~~~~~~~~
+compilation terminated.
+make[4]: *** [/usr/src/linux-headers-7.0.6-2-pve/scripts/Makefile.build:289: nvidia/nv.o] Error 1
+nvidia/nv-dmabuf.c:24:10: fatal error: nv-dmabuf.h: No such file or directory
+   24 | #include "nv-dmabuf.h"
+      |          ^~~~~~~~~~~~~
+compilation terminated.
+nvidia/nv-pci.c:25:10: fatal error: nv-pci-types.h: No such file or directory
+   25 | #include "nv-pci-types.h"
+      |          ^~~~~~~~~~~~~~~~
+compilation terminated.
+make[4]: *** [/usr/src/linux-headers-7.0.6-2-pve/scripts/Makefile.build:289: nvidia/nv-dmabuf.o] Error 1
+make[4]: *** [/usr/src/linux-headers-7.0.6-2-pve/scripts/Makefile.build:289: nvidia/nv-pci.o] Error 1
+nvidia/nv-pci-table.c:28:10: fatal error: cpuopsys.h: No such file or directory
+   28 | #include "cpuopsys.h"
+      |          ^~~~~~~~~~~~
+compilation terminated.
+make[4]: *** [/usr/src/linux-headers-7.0.6-2-pve/scripts/Makefile.build:289: nvidia/nv-pci-table.o] Error 1
+nvidia/nv-i2c.c:28:10: fatal error: os-interface.h: No such file or directory
+   28 | #include "os-interface.h"
+      |          ^~~~~~~~~~~~~~~~
+compilation terminated.
+make[4]: *** [/usr/src/linux-headers-7.0.6-2-pve/scripts/Makefile.build:289: nvidia/nv-i2c.o] Error 1
+make[4]: Target './' not remade because of errors.
+make[3]: *** [/usr/src/linux-headers-7.0.6-2-pve/Makefile:2111: .] Error 2
+make[3]: Target 'modules' not remade because of errors.
+make[2]: *** [/usr/src/linux-headers-7.0.6-2-pve/Makefile:248: __sub-make] Error 2
+make[2]: Target 'modules' not remade because of errors.
+make[2]: Leaving directory '/tmp/selfgz1292240/NVIDIA-Linux-x86_64-570.86.15/kernel'
+make[1]: *** [Makefile:248: __sub-make] Error 2
+make[1]: Target 'modules' not remade because of errors.
+make[1]: Leaving directory '/usr/src/linux-headers-7.0.6-2-pve'
+make: *** [Makefile:115: modules] Error 2
+ERROR: The nvidia kernel module was not created.
+ERROR: Installation has failed.  Please see the file '/var/log/nvidia-installer.log' for details.  You may find suggestions on fixing installation problems in the README available on the Linux driver download page at www.nvidia.com.
 root@gpusrv02:/tmp#
