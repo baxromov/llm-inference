@@ -312,7 +312,7 @@ services:
   # ── 9. LITELLM PROXY ── OpenAI-compatible API gateway + built-in UI ───────
   # config.yaml is auto-generated from models.yaml — run ./deploy.sh render
   litellm:
-    image: ghcr.io/berriai/litellm:main-v1.57.0-stable
+    image: ghcr.io/berriai/litellm:main-stable
     container_name: litellm
     restart: unless-stopped
     networks:
