@@ -1,14 +1,86 @@
-root@gpusrv02:/opt/llm-inference# lsblk
-NAME    MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
-sda       8:0    0 186.3G  0 disk
-├─sda1    8:1    0   953M  0 part /boot/efi
-├─sda2    8:2    0  46.6G  0 part /
-└─sda3    8:3    0 138.8G  0 part [SWAP]
-nvme0n1 259:1    0   2.9T  0 disk
-nvme3n1 259:3    0   2.9T  0 disk
-nvme2n1 259:5    0   2.9T  0 disk
-nvme1n1 259:7    0   2.9T  0 disk
-root@gpusrv02:/opt/llm-inference# pvs 2>/dev/null; vgs 2>/dev/null; lvs 2>/dev/null
-root@gpusrv02:/opt/llm-inference# zpool list 2>/dev/null
-no pools available
+╔══════════════════════════════════════════════════════╗
+║        LLM Inference Stack — Deploy                 ║
+╚══════════════════════════════════════════════════════╝
+
+▶ Checking prerequisites
+[OK]  Docker 29.6.0
+[OK]  Python 3.13.5
+[OK]  PyYAML available
+[OK]  Disk space: 2783 GB free on /data/docker
+[OK]  Found 2 GPU(s):
+       0, NVIDIA A100-SXM4-80GB, 81920 MiB
+       1, NVIDIA A100-SXM4-80GB, 81920 MiB
+
+▶ Configuring environment
+[OK]  .env configured
+
+▶ Rendering configs from models.yaml
+Rendering configs from models.yaml ...
+  [OK] litellm/config.yaml
+  [OK] ollama/init-models.sh
+  [OK] infinity/entrypoint.sh
+
+Done. Apply changes with:
+  docker compose restart litellm          # after chat/embedding/reranker changes
+  docker compose restart infinity         # after embedding/reranker changes
+  docker compose restart ollama-init      # to pull new Ollama models
+
+▶ Writing Prometheus auth token
+[OK]  prometheus/litellm_token written
+
+▶ Checking embedding / reranker model files
+  [OK]  All model files present
+
+▶ Validating docker-compose.yml
+[OK]  docker-compose.yml is valid
+
+▶ Starting all services
+[+] up 183/183
+ ✔ Image ollama/ollama:0.6.5                                      Pulled                                                                                                                                    73.6s
+ ✔ Image minio/mc:RELEASE.2024-11-05T11-29-45Z                    Pulled                                                                                                                                    24.9s
+ ✔ Image michaelf34/infinity:0.0.72                               Pulled                                                                                                                                   144.3s
+ ✔ Image ghcr.io/berriai/litellm:main-stable                      Pulled                                                                                                                                    73.6s
+ ✔ Image langfuse/langfuse:3.35.0                                 Pulled                                                                                                                                    24.1s
+ ✔ Image minio/minio:RELEASE.2024-11-07T00-52-20Z                 Pulled                                                                                                                                    14.0s
+ ✔ Image langfuse/langfuse-worker:3.35.0                          Pulled                                                                                                                                    52.6s
+ ✔ Image nvcr.io/nvidia/k8s/dcgm-exporter:3.3.6-3.4.2-ubuntu22.04 Pulled                                                                                                                                    46.8s
+ ✔ Image postgres:16-alpine                                       Pulled                                                                                                                                    17.2s
+ ✔ Image prom/prometheus:v2.53.0                                  Pulled                                                                                                                                    14.0s
+ ✔ Image redis:7.2-alpine                                         Pulled                                                                                                                                    18.4s
+ ✔ Image grafana/grafana:11.0.0                                   Pulled                                                                                                                                    21.9s
+ ✔ Image clickhouse/clickhouse-server:24.8-alpine                 Pulled                                                                                                                                    19.3s
+ ✔ Network llm-inference_internal                                 Created                                                                                                                                    0.0s
+ ✔ Network llm-inference_frontend                                 Created                                                                                                                                    0.0s
+ ✔ Volume llm-inference_grafana_data                              Created                                                                                                                                    0.0s
+ ✔ Volume llm-inference_redis_data                                Created                                                                                                                                    0.0s
+ ✔ Volume llm-inference_ollama_data                               Created                                                                                                                                    0.0s
+ ✔ Volume llm-inference_prometheus_data                           Created                                                                                                                                    0.0s
+ ✔ Volume llm-inference_minio_data                                Created                                                                                                                                    0.0s
+ ✔ Volume llm-inference_ch_data                                   Created                                                                                                                                    0.0s
+ ✔ Volume llm-inference_pg_data                                   Created                                                                                                                                    0.0s
+ ✔ Container minio                                                Healthy                                                                                                                                   12.9s
+ ✘ Container dcgm-exporter                                        Error dependency dcgm-exporter failed to start                                                                                            83.0s
+ ✘ Container clickhouse                                           Error dependency clickhouse failed to start                                                                                               52.9s
+ ✘ Container ollama                                               Error dependency ollama failed to start                                                                                                  183.5s
+ ✔ Container postgres                                             Healthy                                                                                                                                   14.4s
+ ✔ Container redis                                                Healthy                                                                                                                                   12.9s
+ ✔ Container infinity                                             Started                                                                                                                                    2.5s
+ ✔ Container minio-init                                           Started                                                                                                                                   11.0s
+ ✔ Container prometheus                                           Created                                                                                                                                    0.0s
+ ✔ Container ollama-init                                          Created                                                                                                                                    0.0s
+ ✔ Container langfuse-web                                         Created                                                                                                                                    0.0s
+ ✔ Container grafana                                              Created                                                                                                                                    0.0s
+ ✔ Container langfuse-worker                                      Created                                                                                                                                    0.0s
+ ✔ Container litellm                                              Created                                                                                                                                    0.0s
+dependency failed to start: container clickhouse is unhealthy
 root@gpusrv02:/opt/llm-inference#
+root@gpusrv02:~# docker ps
+CONTAINER ID   IMAGE                                                      COMMAND                  CREATED         STATUS                          PORTS                          NAMES
+e253fd1a6d27   postgres:16-alpine                                         "docker-entrypoint.s…"   3 minutes ago   Up 3 minutes (healthy)          5432/tcp                       postgres
+ab5ad45bae41   redis:7.2-alpine                                           "docker-entrypoint.s…"   3 minutes ago   Up 3 minutes (healthy)          6379/tcp                       redis
+807dfbb529be   clickhouse/clickhouse-server:24.8-alpine                   "/entrypoint.sh"         3 minutes ago   Up 3 minutes (unhealthy)        8123/tcp, 9000/tcp, 9009/tcp   clickhouse
+6f09f8089d20   minio/minio:RELEASE.2024-11-07T00-52-20Z                   "/usr/bin/docker-ent…"   3 minutes ago   Up 3 minutes (healthy)          9000/tcp                       minio
+de8811ea1fc0   michaelf34/infinity:0.0.72                                 "/bin/bash /entrypoi…"   3 minutes ago   Restarting (1) 32 seconds ago                                  infinity
+264a64fa6083   nvcr.io/nvidia/k8s/dcgm-exporter:3.3.6-3.4.2-ubuntu22.04   "/usr/local/dcgm/dcg…"   3 minutes ago   Up 3 minutes (unhealthy)                                       dcgm-exporter
+c05cd1f0662f   ollama/ollama:0.6.5                                        "/bin/ollama serve"      3 minutes ago   Up 3 minutes (unhealthy)        11434/tcp                      ollama
+root@gpusrv02:~#
