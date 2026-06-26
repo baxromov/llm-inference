@@ -160,10 +160,33 @@ for m in missing:
     print(f"         • {m['hf_repo']}")
 
 if os.environ.get('HF_AUTO_DOWNLOAD', '0') == '1':
+    # Ensure huggingface-cli is available, trying multiple pip paths
     try:
-        subprocess.check_call(['huggingface-cli', '--version'], stdout=subprocess.DEVNULL)
+        subprocess.check_call(['huggingface-cli', '--version'],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except (subprocess.CalledProcessError, FileNotFoundError):
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'huggingface-hub', '-q'])
+        installed = False
+        pip_candidates = [['pip3'], ['pip'], [sys.executable, '-m', 'pip']]
+        for pip_cmd in pip_candidates:
+            try:
+                subprocess.check_call(pip_cmd + ['install', 'huggingface-hub[cli]', '-q'])
+                installed = True
+                break
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                pass
+        if not installed:
+            # Last resort: bootstrap pip via ensurepip then retry
+            try:
+                subprocess.check_call([sys.executable, '-m', 'ensurepip', '--upgrade'],
+                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'huggingface-hub[cli]', '-q'])
+                installed = True
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                pass
+        if not installed:
+            print("  [ERR] Cannot install huggingface-hub: pip not available.")
+            print("        Fix: apt install python3-pip && pip3 install huggingface-hub")
+            sys.exit(1)
 
     for m in missing:
         dest = Path('infinity/models') / m['hf_repo']
