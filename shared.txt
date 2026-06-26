@@ -1,11 +1,75 @@
-root@gpusrv02:~# apt remove -y proxmox-headers-7.0.6-2-pve
-Package 'proxmox-headers-7.0.6-2-pve' is not installed, so not removed
-Summary:
-  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 40
-root@gpusrv02:~# apt --fix-broken install -y
-Summary:
-  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 40
+root@gpusrv02:~# dpkg -l | grep nvidia
+ii  firmware-nvidia-graphics             20250410-2                           all          Binary firmware for Nvidia GPU chips
+ii  firmware-nvidia-gsp                  550.163.01-2                         amd64        NVIDIA GSP firmware
+ii  glx-alternative-nvidia               1.2.2                                amd64        allows the selection of NVIDIA as GLX provider
+ii  libegl-nvidia0:amd64                 550.163.01-2                         amd64        NVIDIA binary EGL library
+ii  libgl1-nvidia-glvnd-glx:amd64        550.163.01-2                         amd64        NVIDIA binary OpenGL/GLX library (GLVND variant)
+ii  libglx-nvidia0:amd64                 550.163.01-2                         amd64        NVIDIA binary GLX library
+ii  libnvidia-egl-wayland1:amd64         1:1.1.18-1                           amd64        Wayland EGL External Platform library -- shared library
+ii  libnvidia-eglcore:amd64              550.163.01-2                         amd64        NVIDIA binary EGL core libraries
+ii  libnvidia-glcore:amd64               550.163.01-2                         amd64        NVIDIA binary OpenGL/GLX core libraries
+ii  libnvidia-glvkspirv:amd64            550.163.01-2                         amd64        NVIDIA binary Vulkan Spir-V compiler library
+ii  libnvidia-gpucomp:amd64              550.163.01-2                         amd64        NVIDIA binary GPU compiler library
+ii  libnvidia-ml1:amd64                  550.163.01-2                         amd64        NVIDIA Management Library (NVML) runtime library
+ii  nvidia-alternative                   550.163.01-2                         amd64        allows the selection of NVIDIA as GLX provider
+ii  nvidia-driver                        550.163.01-2                         amd64        NVIDIA metapackage
+ii  nvidia-driver-bin                    550.163.01-2                         amd64        NVIDIA driver support binaries
+ii  nvidia-driver-libs:amd64             550.163.01-2                         amd64        NVIDIA metapackage (OpenGL/GLX/EGL/GLES libraries)
+ii  nvidia-egl-common                    550.163.01-2                         amd64        NVIDIA binary EGL driver - common files
+ii  nvidia-egl-icd:amd64                 550.163.01-2                         amd64        NVIDIA EGL installable client driver (ICD)
+ii  nvidia-installer-cleanup             20240109+1                           amd64        cleanup after driver installation with the nvidia-installer
+ii  nvidia-kernel-common                 20240109+1                           amd64        NVIDIA binary kernel module support files
+ii  nvidia-kernel-dkms                   550.163.01-2                         amd64        NVIDIA binary kernel module DKMS source
+ii  nvidia-kernel-support                550.163.01-2                         amd64        NVIDIA binary kernel module support files
+ii  nvidia-legacy-check                  550.163.01-2                         amd64        check for NVIDIA GPUs requiring a legacy driver
+ii  nvidia-modprobe                      570.133.07-1                         amd64        utility to load NVIDIA kernel modules and create device nodes
+ii  nvidia-support                       20240109+1                           amd64        NVIDIA binary graphics driver support files
+ii  nvidia-vdpau-driver:amd64            550.163.01-2                         amd64        Video Decode and Presentation API for Unix - NVIDIA driver
+ii  pve-nvidia-vgpu-helper               0.3.1                                all          Proxmox Nvidia vGPU helper script and systemd service
+ii  xserver-xorg-video-nvidia            550.163.01-2                         amd64        NVIDIA binary Xorg driver
+root@gpusrv02:~# dpkg -L nvidia-driver-bin
+/.
+/usr
+/usr/lib
+/usr/lib/nvidia
+/usr/lib/nvidia/current
+/usr/lib/nvidia/current/nvidia-bug-report.sh
+/usr/lib/nvidia/current/nvidia-debugdump
+/usr/share
+/usr/share/bug
+/usr/share/bug/nvidia-driver-bin
+/usr/share/bug/nvidia-driver-bin/control
+/usr/share/bug/nvidia-driver-bin/script
+/usr/share/doc
+/usr/share/doc/nvidia-driver-bin
+/usr/share/doc/nvidia-driver-bin/changelog.Debian.gz
+/usr/share/doc/nvidia-driver-bin/changelog.gz
+/usr/share/doc/nvidia-driver-bin/copyright
+/usr/share/lintian
+/usr/share/lintian/overrides
+/usr/share/lintian/overrides/nvidia-driver-bin
+/usr/share/nvidia
+/usr/share/nvidia/nvidia-application-profiles-550.163.01-key-documentation
+/usr/share/nvidia/nvidia-application-profiles-550.163.01-rc
+root@gpusrv02:~# find / -name "nvidia-smi" -type f 2>/dev/null
+root@gpusrv02:~# dpkg --configure -a --force-all
 root@gpusrv02:~# nvidia-smi
 -bash: nvidia-smi: command not found
-root@gpusrv02:~# find /usr -name nvidia-smi 2>/dev/null
+root@gpusrv02:~# which nvidia-smi
+root@gpusrv02:~# find / -name nvidia-smi 2>/dev/null
+root@gpusrv02:~# lsmod | grep nvidia
+nvidia_drm            110592  0
+nvidia_modeset       1355776  1 nvidia_drm
+drm_ttm_helper         16384  1 nvidia_drm
+video                  77824  1 nvidia_modeset
+nvidia              54398976  1 nvidia_modeset
+root@gpusrv02:~# apt install nvidia-utils-550 -y
+Error: Unable to locate package nvidia-utils-550
+root@gpusrv02:~# apt search nvidia-utils
+root@gpusrv02:~# apt install nvidia-utils -y
+Error: Unable to locate package nvidia-utils
+root@gpusrv02:~# apt install -t trixie nvidia-utils -y
+Error: Unable to locate package nvidia-utils
+root@gpusrv02:~# dpkg -L nvidia-driver | grep nvidia-smi
+/usr/share/doc/nvidia-driver/html/nvidia-smi.html
 root@gpusrv02:~#
