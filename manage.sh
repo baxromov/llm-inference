@@ -1,6 +1,6 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────────────────────
-# manage.sh — Senior DevOps management tool for the LLM Inference Stack
+# manage.sh — DevOps management tool for the LLM Inference Stack
 #
 # Usage:
 #   ./manage.sh doctor          check all services, GPU, disk, API health
@@ -79,15 +79,6 @@ doctor() {
     ok "Disk ${USE_PCT}% used (${AVAIL} free)"
   fi
 
-  # Model files
-  MODELS_DIR="infinity/models"
-  if [[ -d "$MODELS_DIR" ]]; then
-    MODEL_SIZE=$(du -sh "$MODELS_DIR" 2>/dev/null | cut -f1)
-    ok "Model files: ${MODELS_DIR} (${MODEL_SIZE})"
-  else
-    warn "infinity/models directory not found"
-  fi
-
   # ── .env ──
   title "Environment"
   if [[ ! -f .env ]]; then
@@ -107,7 +98,6 @@ import yaml, sys
 from pathlib import Path
 with open('models.yaml') as f:
     m = yaml.safe_load(f)
-# check litellm config has the right model names
 with open('litellm/config.yaml') as f:
     lc = f.read()
 chat = [c['name'] for c in m.get('chat', [])]
@@ -122,22 +112,19 @@ PYEOF
     fi
   fi
 
-  # ── Port conflicts ──
+  # ── Port availability ──
   title "Port availability"
-  for port in 4000 3001; do
-    if lsof -ti ":${port}" >/dev/null 2>&1; then
-      PID=$(lsof -ti ":${port}" | head -1)
-      PROC=$(ps -p "$PID" -o comm= 2>/dev/null || echo "?")
-      # Check if it's our own docker container
-      if [[ "$PROC" == "docker"* ]] || [[ "$PROC" == "com.docker"* ]]; then
-        ok "Port ${port} in use by Docker (expected)"
-      else
-        warn "Port ${port} in use by PID ${PID} (${PROC}) — may conflict with stack"
-      fi
+  if lsof -ti ":8080" >/dev/null 2>&1; then
+    PID=$(lsof -ti ":8080" | head -1)
+    PROC=$(ps -p "$PID" -o comm= 2>/dev/null || echo "?")
+    if [[ "$PROC" == "docker"* ]] || [[ "$PROC" == "com.docker"* ]]; then
+      ok "Port 4000 in use by Docker (expected)"
     else
-      info "Port ${port} free (stack not yet started or down)"
+      warn "Port 4000 in use by PID ${PID} (${PROC}) — may conflict with stack"
     fi
-  done
+  else
+    info "Port 4000 free (stack not yet started or down)"
+  fi
 
   # ── Container health ──
   title "Container health"
@@ -146,7 +133,6 @@ PYEOF
   else
     docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Health}}" 2>/dev/null | \
       while IFS=$'\t' read -r name status health; do
-        # Skip header
         [[ "$name" == "NAME" ]] && continue
         if [[ "$health" == "healthy" ]] || [[ "$health" == "" && "$status" == *"Up"* ]]; then
           ok "${name}: ${status}"
@@ -160,24 +146,17 @@ PYEOF
 
   # ── API health ──
   title "API health"
-  if curl -sf --max-time 5 "http://localhost:4000/health" >/dev/null 2>&1; then
-    ok "LiteLLM API responding on :4000"
-    # Quick model list check
+  if curl -sf --max-time 5 "http://localhost:8080/health" >/dev/null 2>&1; then
+    ok "LiteLLM API responding on :8080"
     if [[ -f .env ]]; then
       KEY=$(grep '^LITELLM_MASTER_KEY=' .env | cut -d'=' -f2-)
       MODELS=$(curl -sf --max-time 5 -H "Authorization: Bearer ${KEY}" \
-        "http://localhost:4000/v1/models" 2>/dev/null \
+        "http://localhost:8080/v1/models" 2>/dev/null \
         | python3 -c "import sys,json; d=json.load(sys.stdin); print(', '.join(m['id'] for m in d.get('data',[][:5])))" 2>/dev/null || echo "?")
       info "Available models: ${MODELS}"
     fi
   else
     warn "LiteLLM API not responding on :4000 (container may still be starting)"
-  fi
-
-  if curl -sf --max-time 5 "http://localhost:3001/api/health" >/dev/null 2>&1; then
-    ok "Grafana responding on :3001"
-  else
-    warn "Grafana not responding on :3001"
   fi
 
   # ── Summary ──
@@ -197,22 +176,11 @@ fix() {
   echo ""
   echo -e "${BOLD}${CYAN}── Fix — restarting unhealthy services ──────────────────${NC}"
 
-  # Regenerate configs in case models.yaml changed
   if command -v python3 >/dev/null 2>&1 && python3 -c "import yaml" 2>/dev/null; then
     info "Re-rendering configs from models.yaml..."
     python3 scripts/render-configs.py
   fi
 
-  # Re-write prometheus token
-  if [[ -f .env ]]; then
-    KEY=$(grep '^LITELLM_MASTER_KEY=' .env | cut -d'=' -f2-)
-    if [[ -n "$KEY" ]]; then
-      echo -n "$KEY" > prometheus/litellm_token
-      ok "Prometheus token refreshed"
-    fi
-  fi
-
-  # Find and restart unhealthy containers
   UNHEALTHY=$(docker compose ps --format json 2>/dev/null \
     | python3 -c "
 import sys, json
@@ -260,8 +228,7 @@ logs() {
   SVC="${1:-}"
   if [[ -z "$SVC" ]]; then
     echo "Usage: ./manage.sh logs <service>"
-    echo "Services: ollama, ollama-init, infinity, litellm, langfuse-web, langfuse-worker,"
-    echo "          postgres, clickhouse, redis, minio, prometheus, grafana, dcgm-exporter"
+    echo "Services: ollama, ollama-init, litellm"
     exit 1
   fi
   exec docker compose logs -f --tail=100 "$SVC"
@@ -285,16 +252,14 @@ apply_models() {
 
   echo ""
   info "Which services need restarting?"
-  echo "  1) litellm only      (added/removed a model alias)"
-  echo "  2) infinity + litellm (added/removed embedding or reranker)"
-  echo "  3) all               (added new Ollama chat model)"
+  echo "  1) litellm only   (changed model alias or timeout)"
+  echo "  2) all            (added new Ollama chat model)"
   echo ""
-  read -rp "  Choice [1/2/3]: " CHOICE
+  read -rp "  Choice [1/2]: " CHOICE
 
   case "$CHOICE" in
     1) docker compose restart litellm ;;
-    2) docker compose restart infinity litellm ;;
-    3) docker compose restart ollama litellm infinity ;;
+    2) docker compose restart ollama litellm ;;
     *) warn "Invalid choice — restart services manually with: docker compose restart <service>" ;;
   esac
   ok "Done. Check ./manage.sh doctor for health."
@@ -303,29 +268,20 @@ apply_models() {
 # ─────────────────────────────────────────────────────────────────────────────
 add_model() {
   echo ""
-  echo -e "${BOLD}${CYAN}── Add a new model ──────────────────────────────────────${NC}"
+  echo -e "${BOLD}${CYAN}── Add a new chat model ─────────────────────────────────${NC}"
   echo ""
-  echo "  Model types:"
-  echo "    1) Chat / completion  (runs on Ollama)"
-  echo "    2) Embedding          (runs on Infinity)"
-  echo "    3) Reranker           (runs on Infinity)"
-  echo ""
-  read -rp "  Type [1/2/3]: " TYPE
+  read -rp "  Ollama model tag (e.g. llama3.3:70b): " OLLAMA_TAG
+  read -rp "  Model name for API (e.g. llama3.3-70b): " MODEL_NAME
+  read -rp "  Description: " DESC
+  read -rp "  OpenAI aliases (comma-separated, or blank): " ALIASES_RAW
 
-  case "$TYPE" in
-    1)
-      read -rp "  Ollama model tag (e.g. llama3.3:70b): " OLLAMA_TAG
-      read -rp "  Model name for API (e.g. llama3.3-70b): " MODEL_NAME
-      read -rp "  Description: " DESC
-      read -rp "  OpenAI aliases (comma-separated, or blank): " ALIASES_RAW
+  ALIASES_YAML=""
+  if [[ -n "$ALIASES_RAW" ]]; then
+    ALIASES_YAML=$(echo "$ALIASES_RAW" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | \
+      awk '{print "      - " $0}' | paste -sd '\n')
+  fi
 
-      ALIASES_YAML=""
-      if [[ -n "$ALIASES_RAW" ]]; then
-        ALIASES_YAML=$(echo "$ALIASES_RAW" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | \
-          awk '{print "      - " $0}' | paste -sd '\n')
-      fi
-
-      cat >> models.yaml << YAML
+  cat >> models.yaml << YAML
 
   - name: ${MODEL_NAME}
     ollama_model: ${OLLAMA_TAG}
@@ -335,52 +291,11 @@ add_model() {
     aliases:
 ${ALIASES_YAML}
 YAML
-      ok "Added ${MODEL_NAME} to models.yaml"
-      info "To pull the model: docker exec -it ollama ollama pull ${OLLAMA_TAG}"
-      ;;
-
-    2)
-      read -rp "  HuggingFace repo (e.g. intfloat/e5-large-v2): " HF_REPO
-      MODEL_NAME="$HF_REPO"
-      LOCAL_PATH="/models/${HF_REPO}"
-
-      cat >> models.yaml << YAML
-
-  - name: ${MODEL_NAME}
-    hf_repo: ${HF_REPO}
-    local_path: ${LOCAL_PATH}
-    aliases: []
-YAML
-      ok "Added ${MODEL_NAME} to models.yaml"
-      info "Download the model files first:"
-      info "  huggingface-cli download ${HF_REPO} --local-dir infinity/models/${HF_REPO}"
-      ;;
-
-    3)
-      read -rp "  HuggingFace repo (e.g. BAAI/bge-reranker-v2-gemma): " HF_REPO
-      MODEL_NAME="$HF_REPO"
-      LOCAL_PATH="/models/${HF_REPO}"
-
-      cat >> models.yaml << YAML
-
-  - name: ${MODEL_NAME}
-    hf_repo: ${HF_REPO}
-    local_path: ${LOCAL_PATH}
-    aliases: []
-YAML
-      ok "Added ${MODEL_NAME} to models.yaml"
-      info "Download the model files first:"
-      info "  huggingface-cli download ${HF_REPO} --local-dir infinity/models/${HF_REPO}"
-      ;;
-
-    *)
-      echo "Invalid choice."
-      exit 1
-      ;;
-  esac
+  ok "Added ${MODEL_NAME} to models.yaml"
+  info "To pull the model: docker exec -it ollama ollama pull ${OLLAMA_TAG}"
 
   echo ""
-  read -rp "  Apply now? (re-render + restart affected service) [y/N]: " APPLY
+  read -rp "  Apply now? (re-render + restart litellm) [y/N]: " APPLY
   if [[ "$APPLY" =~ ^[Yy]$ ]]; then
     apply_models
   else
@@ -416,19 +331,18 @@ help() {
   echo "    status           compact container + GPU overview"
   echo "    logs <svc>       tail logs for a service"
   echo "    restart <svc>    restart one or more containers"
-  echo "    add-model        interactive wizard to add a chat/embedding/reranker model"
+  echo "    add-model        interactive wizard to add a chat model"
   echo "    apply-models     re-render configs from models.yaml + restart services"
   echo "    update-images    pull latest pinned Docker images"
   echo "    shell <svc>      open an interactive shell in a container"
   echo ""
-  echo "  Services: ollama  infinity  litellm  langfuse-web  langfuse-worker"
-  echo "            postgres  clickhouse  redis  minio  prometheus  grafana"
+  echo "  Services: ollama  ollama-init  litellm"
   echo ""
   echo "  Examples:"
   echo "    ./manage.sh doctor"
   echo "    ./manage.sh fix"
   echo "    ./manage.sh logs litellm"
-  echo "    ./manage.sh restart litellm infinity"
+  echo "    ./manage.sh restart litellm"
   echo "    ./manage.sh add-model"
   echo ""
 }

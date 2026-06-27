@@ -1,18 +1,17 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# models.yaml — Single Source of Truth for ALL models in the LLM stack
+# models.yaml — Chat models for the LLM stack
 #
-# This file drives three downstream configs (auto-generated — do not edit them):
+# This file drives two downstream configs (auto-generated — do not edit them):
 #   litellm/config.yaml      ← LiteLLM API gateway model list
 #   ollama/init-models.sh    ← which models Ollama pulls on first start
-#   infinity/entrypoint.sh   ← which embedding/reranker models Infinity serves
 #
 # To add / remove a model:
 #   1. Edit this file
 #   2. Run:  ./deploy.sh render          (just re-render, no restart)
-#      or:   ./manage.sh apply-models    (re-render + restart affected services)
+#      or:   ./manage.sh apply-models    (re-render + restart litellm)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# ── Chat / Completion models (served by Ollama on GPU 0+1) ──────────────────
+# ── Chat / Completion models (served by Ollama) ──────────────────────────────
 chat:
   - name: qwen3.6-27b
     ollama_model: qwen3.6:27b          # model tag used with `ollama pull`
@@ -38,43 +37,3 @@ chat:
   #   timeout: 600
   #   stream_timeout: 600
   #   aliases: []
-
-
-# ── Embedding models (served by Infinity on GPU 1) ───────────────────────────
-# For each model: download with `huggingface-cli download <hf_repo> --local-dir infinity/models/<hf_repo>`
-embedding:
-  - name: BAAI/bge-m3
-    hf_repo: BAAI/bge-m3
-    local_path: /models/BAAI/bge-m3   # path inside the Infinity container
-    aliases:
-      - text-embedding-3-large
-
-  # ── To add another embedding model:
-  # - name: intfloat/e5-large-v2
-  #   hf_repo: intfloat/e5-large-v2
-  #   local_path: /models/intfloat/e5-large-v2
-  #   aliases: []
-
-
-# ── Reranker models (served by Infinity on GPU 1) ────────────────────────────
-reranker:
-  - name: BAAI/bge-reranker-v2-m3
-    hf_repo: BAAI/bge-reranker-v2-m3
-    local_path: /models/BAAI/bge-reranker-v2-m3
-    aliases:
-      - rerank-english-v3.0
-
-  # - name: BAAI/bge-reranker-v2-gemma
-  #   hf_repo: BAAI/bge-reranker-v2-gemma
-  #   local_path: /models/BAAI/bge-reranker-v2-gemma
-  #   aliases: []
-
-
-# ── Infinity server settings ─────────────────────────────────────────────────
-# Changing these requires: docker compose restart infinity
-infinity:
-  port: 7997
-  engine: torch
-  dtype: float16
-  batch_size: 64
-  device: cuda
