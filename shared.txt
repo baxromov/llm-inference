@@ -1,14 +1,20 @@
-root@gpusrv02:/opt/llm-inference# ollama run qwen3.6:35b
-pulling manifest
-Error: write /root/.ollama/models/blobs/sha256-f5ee307a2982106a6eb82b62b2c00b575c9072145a759ae4660378acda8dcf2d-partial-0: no space left on device
-root@gpusrv02:/opt/llm-inference# lsblk
-NAME    MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
-sda       8:0    0 186.3G  0 disk
-├─sda1    8:1    0   953M  0 part /boot/efi
-├─sda2    8:2    0  46.6G  0 part /
-└─sda3    8:3    0 138.8G  0 part [SWAP]
-nvme0n1 259:1    0   2.9T  0 disk /data
-nvme3n1 259:3    0   2.9T  0 disk
-nvme2n1 259:5    0   2.9T  0 disk
-nvme1n1 259:7    0   2.9T  0 disk
-root@gpusrv02:/opt/llm-inference#
+## RUN ON SERVER — fix storage then deploy:
+
+# 1. Clean up failed partial download (freeing space on /)
+rm -rf /root/.ollama/models/blobs/*-partial-* 2>/dev/null; rm -rf /root/.ollama/models/blobs/sha256-f5* 2>/dev/null
+
+# 2. Deploy — this configures OLLAMA_MODELS=/data/ollama/models and restarts service
+git pull && ./deploy.sh 2>&1 | tee /tmp/out.txt
+
+# 3. Capture status
+echo "=== OLLAMA SERVICE ===" >> /tmp/out.txt
+systemctl status ollama --no-pager | head -15 >> /tmp/out.txt
+echo "=== OLLAMA ENV ===" >> /tmp/out.txt
+systemctl show ollama --property=Environment >> /tmp/out.txt
+echo "=== OLLAMA LIST ===" >> /tmp/out.txt
+ollama list >> /tmp/out.txt
+echo "=== DISK USAGE ===" >> /tmp/out.txt
+df -h /data / >> /tmp/out.txt
+echo "=== DOCKER ===" >> /tmp/out.txt
+docker ps >> /tmp/out.txt
+cp /tmp/out.txt shared.txt; git add shared.txt && git commit -m "deploy output" && git push
