@@ -9,7 +9,7 @@
 #   ./manage.sh logs <service>  tail logs for a service (ctrl+c to stop)
 #   ./manage.sh restart <svc>   restart one or more services
 #   ./manage.sh add-model       interactive wizard to add a new model
-#   ./manage.sh apply-models    re-render configs from models.yaml + restart
+#   ./manage.sh apply-models    restart services after git pull (configs pre-rendered)
 #   ./manage.sh update-images   pull latest pinned image tags
 #   ./manage.sh shell <svc>     open a shell in a running container
 # ─────────────────────────────────────────────────────────────────────────────
@@ -176,11 +176,6 @@ fix() {
   echo ""
   echo -e "${BOLD}${CYAN}── Fix — restarting unhealthy services ──────────────────${NC}"
 
-  if command -v python3 >/dev/null 2>&1 && python3 -c "import yaml" 2>/dev/null; then
-    info "Re-rendering configs from models.yaml..."
-    python3 scripts/render-configs.py
-  fi
-
   UNHEALTHY=$(docker compose ps --format json 2>/dev/null \
     | python3 -c "
 import sys, json
@@ -247,20 +242,24 @@ restart_svc() {
 # ─────────────────────────────────────────────────────────────────────────────
 apply_models() {
   echo ""
-  info "Re-rendering configs from models.yaml..."
-  python3 scripts/render-configs.py
-
+  echo -e "${BOLD}${CYAN}── Apply models — configs already rendered & pulled via git ─${NC}"
   echo ""
   info "Which services need restarting?"
-  echo "  1) litellm only   (changed model alias or timeout)"
-  echo "  2) all            (added new Ollama chat model)"
+  echo "  1) litellm only   (changed timeout or removed model)"
+  echo "  2) litellm + pull new Ollama model   (added a new model)"
   echo ""
   read -rp "  Choice [1/2]: " CHOICE
 
   case "$CHOICE" in
-    1) docker compose restart litellm ;;
-    2) docker compose restart ollama litellm ;;
-    *) warn "Invalid choice — restart services manually with: docker compose restart <service>" ;;
+    1)
+      docker compose restart litellm
+      ;;
+    2)
+      info "Pulling new Ollama model(s) via init-models.sh ..."
+      bash ollama/init-models.sh
+      docker compose restart litellm
+      ;;
+    *) warn "Invalid choice — restart manually: docker compose restart litellm" ;;
   esac
   ok "Done. Check ./manage.sh doctor for health."
 }
