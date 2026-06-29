@@ -1,36 +1,70 @@
-root@gpusrv02:/opt/llm-inference# echo "=== commit ===" && git log --oneline -2
-echo "=== compose GPU lines ===" && grep -n "NVIDIA\|runtime\|driver: nvidia" docker-compose.yml
-echo "=== docker default runtime ===" && docker info 2>/dev/null | grep -i 'Default Runtime'
-echo "=== ollama container runtime ===" && docker inspect ollama --format '{{.HostConfig.Runtime}}' 2>/dev/null
-echo "=== nvidia-smi INSIDE ollama ===" && docker exec ollama nvidia-smi 2>&1 | head -5
-echo "=== direct test with ollama image ===" && docker run --rm --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all -e NVIDIA_DRIVER_CAPABILITIES=compute,utility ollama/ollama:0.6.5
-=== commit ===
-af4cb14 (HEAD -> main, origin/main, origin/HEAD) chore: diagnostic commands for GPU detection issue
-d1eb888 sdf
-=== compose GPU lines ===
-28:    runtime: nvidia
-34:      - NVIDIA_VISIBLE_DEVICES=all
-45:            - driver: nvidia
-=== docker default runtime ===
- Default Runtime: runc
-=== ollama container runtime ===
-nvidia
-=== nvidia-smi INSIDE ollama ===
-Mon Jun 29 03:40:58 2026
-+-----------------------------------------------------------------------------------------+
-| NVIDIA-SMI 550.163.01             Driver Version: 550.163.01     CUDA Version: N/A      |
-|-----------------------------------------+------------------------+----------------------+
-| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
-=== direct test with ollama image ===
-Couldn't find '/root/.ollama/id_ed25519'. Generating new private key.
-Your new public key is:
+root@gpusrv02:/opt/llm-inference# ./deploy.sh
 
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFrqB+j2XsB3dbGT2E5vVqG1sd62py/ivOi+RJgD7z1t
+╔══════════════════════════════════════════════════════╗
+║    LLM Inference Stack — Self-Healing Deploy        ║
+╚══════════════════════════════════════════════════════╝
+[--]   Mode: Auto-fix ON
 
-2026/06/29 03:41:13 routes.go:1231: INFO server config env="map[CUDA_VISIBLE_DEVICES: GPU_DEVICE_ORDINAL: HIP_VISIBLE_DEVICES: HSA_OVERRIDE_GFX_VERSION: HTTPS_PROXY: HTTP_PROXY: NO_PROXY: OLLAMA_CONTEXT_LENGTH:2048 OLLAMA_DEBUG:false OLLAMA_FLASH_ATTENTION:false OLLAMA_GPU_OVERHEAD:0 OLLAMA_HOST:http://0.0.0.0:11434 OLLAMA_INTEL_GPU:false OLLAMA_KEEP_ALIVE:5m0s OLLAMA_KV_CACHE_TYPE: OLLAMA_LLM_LIBRARY: OLLAMA_LOAD_TIMEOUT:5m0s OLLAMA_MAX_LOADED_MODELS:0 OLLAMA_MAX_QUEUE:512 OLLAMA_MODELS:/root/.ollama/models OLLAMA_MULTIUSER_CACHE:false OLLAMA_NEW_ENGINE:false OLLAMA_NOHISTORY:false OLLAMA_NOPRUNE:false OLLAMA_NUM_PARALLEL:0 OLLAMA_ORIGINS:[http://localhost https://localhost http://localhost:* https://localhost:* http://127.0.0.1 https://127.0.0.1 http://127.0.0.1:* https://127.0.0.1:* http://0.0.0.0 https://0.0.0.0 http://0.0.0.0:* https://0.0.0.0:* app://* file://* tauri://* vscode-webview://* vscode-file://*] OLLAMA_SCHED_SPREAD:false ROCR_VISIBLE_DEVICES: http_proxy: https_proxy: no_proxy:]"
-time=2026-06-29T03:41:13.980Z level=INFO source=images.go:458 msg="total blobs: 0"
-time=2026-06-29T03:41:13.980Z level=INFO source=images.go:465 msg="total unused blobs removed: 0"
-time=2026-06-29T03:41:13.980Z level=INFO source=routes.go:1298 msg="Listening on [::]:11434 (version 0.6.5)"
-time=2026-06-29T03:41:13.980Z level=INFO source=gpu.go:217 msg="looking for compatible GPUs"
-time=2026-06-29T03:41:13.993Z level=INFO source=gpu.go:377 msg="no compatible GPUs were discovered"
-time=2026-06-29T03:41:13.993Z level=INFO source=types.go:130 msg="inference compute" id=0 library=cpu variant="" compute="" driver=0.0 name="" total="503.6 GiB" available="494.2 GiB"
+▶ 1/9  Docker
+[OK]   Docker 29.6.0 — daemon running
+
+▶ 2/9  Python dependencies
+[OK]   Python 3.13.5 + PyYAML ready
+
+▶ 3/9  GPU & nvidia runtime
+[OK]   Found 2 GPU(s):
+       0, NVIDIA A100-SXM4-80GB, 81920 MiB, 550.163.01
+       1, NVIDIA A100-SXM4-80GB, 81920 MiB, 550.163.01
+[OK]   nvidia-container-toolkit 1.19.1
+[OK]   nvidia runtime registered in Docker
+[OK]   nvidia runtime confirmed in Docker
+[!!]   libcuda.so.1 NOT found on host — CUDA compute won't work in containers
+[!!]   This is why Ollama logs 'no compatible GPUs were discovered'
+[FIX]  Installing CUDA driver userspace libraries (driver: 550)...
+W: OpenPGP signature verification failed: https://nvidia.github.io/libnvidia-container/stable/deb/amd64  InRelease: Sub-process /usr/bin/sqv returned an error code (1), error message is: Missing key C95B321B61E88C1809C4F759DDCAE044F796ECB0, which is needed to verify signature.
+[!!]   Auto-install failed. Manual fix:
+[!!]     sudo apt-get install -y cuda-drivers
+[!!]     Or add the CUDA repo: https://developer.nvidia.com/cuda-downloads
+
+▶ 4/9  Disk space
+[OK]   Disk: 2758 GB free on /data/docker
+
+▶ 5/9  Environment (.env)
+[OK]   .env configured
+
+▶ 6/9  Rendering configs from models.yaml
+Rendering configs from models.yaml ...
+  [OK] litellm/config.yaml
+  [OK] ollama/init-models.sh
+
+Done. Apply changes with:
+  docker compose restart litellm     # after model changes
+  docker compose restart ollama-init # to pull new Ollama models
+[OK]   Configs rendered (litellm/config.yaml + ollama/init-models.sh)
+
+▶ 7/9  Validating docker-compose.yml
+[OK]   docker-compose.yml is valid
+
+▶ 8/9  Starting services
+[--]   Pulling Docker images...
+[+] up 0/1
+ ⠦ Container ollama Starting                                                                                                                                                                                13.5s
+^C[OK]   Containers started
+
+▶ 9/9  Health check & auto-fix
+
+[--]   Waiting for services to become healthy (timeout: 300s)
+[OK]   All services healthy
+
+╔══════════════════════════════════════════════════════╗
+║             Stack is up!                            ║
+╠══════════════════════════════════════════════════════╣
+║  LiteLLM API  →  http://<server>:8080/v1           ║
+║  LiteLLM UI   →  http://<server>:8080/ui           ║
+╚══════════════════════════════════════════════════════╝
+
+  Watch model pull:  docker compose logs -f ollama-init
+  Health check:      ./manage.sh doctor
+  Add a model:       ./manage.sh add-model
+
+root@gpusrv02:/opt/llm-inference#
