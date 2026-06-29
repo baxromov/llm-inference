@@ -143,6 +143,49 @@ configure_nvidia_runtime() {
   ok "nvidia runtime configured and Docker restarted"
 }
 
+# Add the official NVIDIA CUDA apt repo (developer.download.nvidia.com).
+# This is separate from the nvidia-container-toolkit repo and provides
+# libcuda1-<version> and cuda-drivers packages.
+add_cuda_apt_repo() {
+  local arch; arch=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
+  # Map Ubuntu codename → CUDA repo path segment (nvidia uses no hyphens)
+  local codename; codename=$(. /etc/os-release 2>/dev/null && echo "${VERSION_CODENAME:-jammy}")
+  local repo_id="${codename//-/}"  # e.g. jammy, focal, noble
+
+  if dpkg -l cuda-keyring 2>/dev/null | grep -q "^ii"; then
+    return 0  # already added
+  fi
+
+  fixing "Adding NVIDIA CUDA apt repository (${repo_id}/${arch})..."
+  local keyring_url="https://developer.download.nvidia.com/compute/cuda/repos/${repo_id}/${arch}/cuda-keyring_1.1-1_all.deb"
+  if wget -q -O /tmp/cuda-keyring.deb "$keyring_url" 2>/dev/null \
+     && $SUDO dpkg -i /tmp/cuda-keyring.deb 2>/dev/null; then
+    rm -f /tmp/cuda-keyring.deb
+    ok "CUDA apt repo added"
+  else
+    rm -f /tmp/cuda-keyring.deb
+    warn "Could not add CUDA apt repo (URL: ${keyring_url})"
+    return 1
+  fi
+}
+
+# Refresh the GPG key for the nvidia-container-toolkit repo if it is expired/missing.
+# Symptom: "Missing key C95B321B61E88C1809C4F759DDCAE044F796ECB0" in apt-get update output.
+fix_nvidia_container_toolkit_key() {
+  local key_file="/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
+  if [[ ! -f "$key_file" ]]; then
+    return 0  # repo not configured here — skip
+  fi
+  local update_out
+  update_out=$($SUDO apt-get update 2>&1 || true)
+  if echo "$update_out" | grep -q "nvidia.github.io.*Missing key\|nvidia.github.io.*NO_PUBKEY"; then
+    fixing "Refreshing expired NVIDIA container-toolkit repo GPG key..."
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+      $SUDO gpg --dearmor -o "$key_file" --yes 2>/dev/null
+    ok "NVIDIA container-toolkit repo key refreshed"
+  fi
+}
+
 # Ensure libcuda.so.1 (CUDA driver bridge) exists on the host.
 # Without it, nvidia-container-toolkit can't inject CUDA compute into containers
 # even when runtime: nvidia is set — nvidia-smi shows "CUDA Version: N/A" and
@@ -184,15 +227,23 @@ check_and_fix_cuda_libraries() {
   fixing "Installing CUDA driver userspace libraries (driver: ${driver_major})..."
 
   if [[ "$PKG_MGR" == "apt" ]]; then
-    $SUDO apt-get update -qq
+    # Fix any expired GPG keys before running apt-get update
+    fix_nvidia_container_toolkit_key
+
+    # Ensure CUDA apt repo is present (provides libcuda1-<ver> and cuda-drivers)
+    add_cuda_apt_repo
+
+    $SUDO apt-get update -qq 2>/dev/null || true
+
     # Try specific version first, fall back to generic
     $SUDO apt-get install -y -qq "libcuda1-${driver_major}" 2>/dev/null \
     || $SUDO apt-get install -y -qq "cuda-drivers-${driver_major}" 2>/dev/null \
     || $SUDO apt-get install -y -qq cuda-drivers 2>/dev/null \
     || {
       warn "Auto-install failed. Manual fix:"
-      warn "  sudo apt-get install -y cuda-drivers"
-      warn "  Or add the CUDA repo: https://developer.nvidia.com/cuda-downloads"
+      warn "  wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb"
+      warn "  sudo dpkg -i cuda-keyring_1.1-1_all.deb && sudo apt-get update"
+      warn "  sudo apt-get install -y libcuda1-${driver_major}"
       return 1
     }
     $SUDO ldconfig
