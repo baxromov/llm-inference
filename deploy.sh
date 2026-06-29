@@ -143,6 +143,70 @@ configure_nvidia_runtime() {
   ok "nvidia runtime configured and Docker restarted"
 }
 
+# Ensure libcuda.so.1 (CUDA driver bridge) exists on the host.
+# Without it, nvidia-container-toolkit can't inject CUDA compute into containers
+# even when runtime: nvidia is set — nvidia-smi shows "CUDA Version: N/A" and
+# Ollama reports "no compatible GPUs were discovered".
+check_and_fix_cuda_libraries() {
+  # 1. Already in ldconfig cache — ideal
+  if ldconfig -p 2>/dev/null | grep -q "libcuda.so.1"; then
+    ok "CUDA driver library (libcuda.so.1) found on host"
+    return 0
+  fi
+
+  # 2. Exists on disk but not in ldconfig — just refresh the cache
+  local libcuda_path
+  libcuda_path=$(find /usr /opt /run -name "libcuda.so.1" 2>/dev/null | head -1)
+  if [[ -n "$libcuda_path" ]]; then
+    local libcuda_dir; libcuda_dir=$(dirname "$libcuda_path")
+    warn "libcuda.so.1 found at ${libcuda_path} but missing from ldconfig cache"
+    if [[ $AUTO_FIX -eq 1 ]]; then
+      fixing "Adding ${libcuda_dir} to /etc/ld.so.conf.d/nvidia-cuda.conf..."
+      echo "$libcuda_dir" | $SUDO tee /etc/ld.so.conf.d/nvidia-cuda.conf >/dev/null
+      $SUDO ldconfig
+      ok "libcuda.so.1 registered in ldconfig"
+    fi
+    return 0
+  fi
+
+  # 3. Completely missing — try to install the driver userspace package
+  warn "libcuda.so.1 NOT found on host — CUDA compute won't work in containers"
+  warn "This is why Ollama logs 'no compatible GPUs were discovered'"
+
+  if [[ $AUTO_FIX -eq 0 ]]; then
+    fatal "libcuda.so.1 missing.\n  Fix: sudo apt-get install -y cuda-drivers\n  Then re-run ./deploy.sh"
+  fi
+
+  local driver_major
+  driver_major=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null \
+    | head -1 | cut -d. -f1)
+
+  fixing "Installing CUDA driver userspace libraries (driver: ${driver_major})..."
+
+  if [[ "$PKG_MGR" == "apt" ]]; then
+    $SUDO apt-get update -qq
+    # Try specific version first, fall back to generic
+    $SUDO apt-get install -y -qq "libcuda1-${driver_major}" 2>/dev/null \
+    || $SUDO apt-get install -y -qq "cuda-drivers-${driver_major}" 2>/dev/null \
+    || $SUDO apt-get install -y -qq cuda-drivers 2>/dev/null \
+    || {
+      warn "Auto-install failed. Manual fix:"
+      warn "  sudo apt-get install -y cuda-drivers"
+      warn "  Or add the CUDA repo: https://developer.nvidia.com/cuda-downloads"
+      return 1
+    }
+    $SUDO ldconfig
+    if ldconfig -p 2>/dev/null | grep -q "libcuda.so.1"; then
+      ok "libcuda.so.1 installed and registered"
+    else
+      warn "Package installed but libcuda.so.1 still not in ldconfig — CUDA may still fail"
+    fi
+  else
+    warn "Non-apt system: install CUDA driver libraries manually, then re-run."
+    return 1
+  fi
+}
+
 # Return the mount point with the most free space (skip /, /boot, tmpfs, devtmpfs)
 find_best_large_mount() {
   df --output=target,avail -x tmpfs -x devtmpfs -x squashfs 2>/dev/null \
@@ -382,6 +446,10 @@ else
       warn "nvidia runtime not confirmed. Continuing — monitor ollama container startup."
     fi
   fi
+
+  # CUDA compute libraries — must exist on host so the toolkit can inject them
+  # into containers. Without this, nvidia-smi works but CUDA does not.
+  check_and_fix_cuda_libraries
 fi
 
 # ── Step 4: Disk space ────────────────────────────────────────────────────────
