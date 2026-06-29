@@ -1,11 +1,104 @@
+^C
+root@gpusrv02:/opt/llm-inference# git pull && ./deploy.sh 2>&1 | tee /tmp/deploy_out.txt; echo "=== OLLAMA GPU CHECK ===" >> /tmp/deploy_out.txt; docker exec ollama ollama list 2>&1 >> /tmp/deploy_out.txt; docker logs ollama 2>&1 | grep -E "library=|cuda|GPU|gpu|error 802|CUDA" | head -20 >> /tmp/deploy_out.txt; echo "=== CDI SPEC FIRST 10 ===" >> /tmp/deploy_out.txt; head -10 /etc/cdi/nvidia.yaml 2>/dev/null >> /tmp/deploy_out.txt; cp /tmp/deploy_out.txt shared.txt; git add shared.txt && git commit -m "deploy output" && git push
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 6 (delta 3), reused 6 (delta 3), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 1.52 KiB | 1.52 MiB/s, done.
+From https://github.com/baxromov/llm-inference
+   d8ebda0..3c844fb  main       -> origin/main
+Updating d8ebda0..3c844fb
+Fast-forward
+ shared.txt | 37 +++++++++++++++++++++++++++++++++++++
+ 1 file changed, 37 insertions(+)
+
+╔══════════════════════════════════════════════════════╗
+║    LLM Inference Stack — Self-Healing Deploy        ║
+╚══════════════════════════════════════════════════════╝
+[--]   Mode: Auto-fix ON
+
+▶ 1/9  Docker
+[OK]   Docker 29.6.0 — daemon running
+
+▶ 2/9  Python dependencies
+[OK]   Python 3.13.5 + PyYAML ready
+
+▶ 3/9  GPU & nvidia runtime
+[OK]   Found 2 GPU(s):
+       0, NVIDIA A100-SXM4-80GB, 81920 MiB, 550.163.01
+       1, NVIDIA A100-SXM4-80GB, 81920 MiB, 550.163.01
+[OK]   nvidia-container-toolkit 1.19.1
+[OK]   nvidia runtime registered in Docker
+[OK]   nvidia runtime confirmed in Docker
+[OK]   CDI spec present — GPU libraries mapped via nvidia-ctk cdi
+
+▶ 4/9  Disk space
+[OK]   Disk: 2758 GB free on /data/docker
+
+▶ 5/9  Environment (.env)
+[OK]   .env configured
+
+▶ 6/9  Rendering configs from models.yaml
+Rendering configs from models.yaml ...
+  [OK] litellm/config.yaml
+  [OK] ollama/init-models.sh
+
+Done. Apply changes with:
+  docker compose restart litellm     # after model changes
+  docker compose restart ollama-init # to pull new Ollama models
+[OK]   Configs rendered (litellm/config.yaml + ollama/init-models.sh)
+
+▶ 7/9  Validating docker-compose.yml
+[OK]   docker-compose.yml is valid
+
+▶ 8/9  Starting services
+[--]   Pulling Docker images...
+ Container litellm Running
+ Container ollama Running
+ Container ollama-init Running
+ Container ollama Waiting
+ Container ollama Waiting
+ Container ollama Healthy
+ Container ollama Healthy
+ Container litellm Waiting
+ Container ollama Waiting
+ Container ollama-init Waiting
+ Container ollama-init Healthy
+container litellm is unhealthy
+ Container ollama Running
+ Container ollama-init Running
+ Container litellm Running
+ Container ollama Waiting
+ Container ollama Waiting
+ Container ollama Healthy
+ Container ollama Healthy
+[OK]   Containers started
+
+▶ 9/9  Health check & auto-fix
+
+[--]   Waiting for services to become healthy (timeout: 300s)
+[--]     [0s] waiting on: litellm
+[--]     [10s] waiting on: litellm
+[--]     [20s] waiting on: litellm
+[--]     [30s] waiting on: litellm
+[--]     [40s] waiting on: litellm
+[--]     [50s] waiting on: litellm
+^C
+root@gpusrv02:/opt/llm-inference#
+##############################################################################
 root@gpusrv02:~# docker ps
-CONTAINER ID   IMAGE                                 COMMAND                  CREATED          STATUS                            PORTS                                                   NAMES
-61e4d5968adf   ollama/ollama:0.6.5                   "/bin/ollama serve"      7 minutes ago    Up 7 minutes (healthy)            11434/tcp                                               ollama
-a23e10bf7575   ghcr.io/berriai/litellm:main-stable   "docker/prod_entrypo…"   52 minutes ago   Up 2 minutes (health: starting)   4000/tcp, 0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp   litellm
-86ba6ee1ce52   ollama/ollama:0.6.5                   "/bin/bash /init-mod…"   52 minutes ago   Up 19 minutes                     11434/tcp                                               ollama-init
+CONTAINER ID   IMAGE                                 COMMAND                  CREATED             STATUS                     PORTS                                                   NAMES
+f301f556702d   ghcr.io/berriai/litellm:main-stable   "docker/prod_entrypo…"   4 minutes ago       Up 4 minutes (unhealthy)   4000/tcp, 0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp   litellm
+61e4d5968adf   ollama/ollama:0.6.5                   "/bin/ollama serve"      20 minutes ago      Up 20 minutes (healthy)    11434/tcp                                               ollama
+86ba6ee1ce52   ollama/ollama:0.6.5                   "/bin/bash /init-mod…"   About an hour ago   Up 32 minutes              11434/tcp                                               ollama-init
+root@gpusrv02:~# docker exec -it 86ba6ee1ce52 /bin/bash
+root@86ba6ee1ce52:/# nvidia-smi
+bash: nvidia-smi: command not found
+root@86ba6ee1ce52:/# exit
+exit
 root@gpusrv02:~# docker exec -it 61e4d5968adf /bin/bash
 root@61e4d5968adf:/# nvidia-smi
-Mon Jun 29 04:26:56 2026
+Mon Jun 29 04:39:26 2026
 +-----------------------------------------------------------------------------------------+
 | NVIDIA-SMI 550.163.01             Driver Version: 550.163.01     CUDA Version: N/A      |
 |-----------------------------------------+------------------------+----------------------+
@@ -29,12 +122,116 @@ Mon Jun 29 04:26:56 2026
 |=========================================================================================|
 |  No running processes found                                                             |
 +-----------------------------------------------------------------------------------------+
-root@61e4d5968adf:/# exit
-exit
-root@gpusrv02:~# docker exec -it 86ba6ee1ce52 /bin/bash
-root@86ba6ee1ce52:/# nvidia-smi
-bash: nvidia-smi: command not found
-root@86ba6ee1ce52:/#
-## RUN THIS ON THE SERVER:
+root@61e4d5968adf:/#
+##################################################################################################
+root@gpusrv02:/opt/llm-inference# git pull && ./deploy.sh 2>&1 | tee /tmp/deploy_out.txt; echo "=== OLLAMA GPU CHECK ===" >> /tmp/deploy_out.txt; docker exec ollama ollama list 2>&1 >> /tmp/deploy_out.txt; docker logs ollama 2>&1 | grep -E "library=|cuda|GPU|gpu|error 802|CUDA" | head -20 >> /tmp/deploy_out.txt; echo "=== CDI SPEC FIRST 10 ===" >> /tmp/deploy_out.txt; head -10 /etc/cdi/nvidia.yaml 2>/dev/null >> /tmp/deploy_out.txt; cp /tmp/deploy_out.txt shared.txt; git add shared.txt && git commit -m "deploy output" && git push
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 6 (delta 3), reused 6 (delta 3), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 1.52 KiB | 1.52 MiB/s, done.
+From https://github.com/baxromov/llm-inference
+   d8ebda0..3c844fb  main       -> origin/main
+Updating d8ebda0..3c844fb
+Fast-forward
+ shared.txt | 37 +++++++++++++++++++++++++++++++++++++
+ 1 file changed, 37 insertions(+)
 
-git pull && ./deploy.sh 2>&1 | tee /tmp/deploy_out.txt; echo "=== OLLAMA GPU CHECK ===" >> /tmp/deploy_out.txt; docker exec ollama ollama list 2>&1 >> /tmp/deploy_out.txt; docker logs ollama 2>&1 | grep -E "library=|cuda|GPU|gpu|error 802|CUDA" | head -20 >> /tmp/deploy_out.txt; echo "=== CDI SPEC FIRST 10 ===" >> /tmp/deploy_out.txt; head -10 /etc/cdi/nvidia.yaml 2>/dev/null >> /tmp/deploy_out.txt; cp /tmp/deploy_out.txt shared.txt; git add shared.txt && git commit -m "deploy output" && git push
+╔══════════════════════════════════════════════════════╗
+║    LLM Inference Stack — Self-Healing Deploy        ║
+╚══════════════════════════════════════════════════════╝
+[--]   Mode: Auto-fix ON
+
+▶ 1/9  Docker
+[OK]   Docker 29.6.0 — daemon running
+
+▶ 2/9  Python dependencies
+[OK]   Python 3.13.5 + PyYAML ready
+
+▶ 3/9  GPU & nvidia runtime
+[OK]   Found 2 GPU(s):
+       0, NVIDIA A100-SXM4-80GB, 81920 MiB, 550.163.01
+       1, NVIDIA A100-SXM4-80GB, 81920 MiB, 550.163.01
+[OK]   nvidia-container-toolkit 1.19.1
+[OK]   nvidia runtime registered in Docker
+[OK]   nvidia runtime confirmed in Docker
+[OK]   CDI spec present — GPU libraries mapped via nvidia-ctk cdi
+
+▶ 4/9  Disk space
+[OK]   Disk: 2758 GB free on /data/docker
+
+▶ 5/9  Environment (.env)
+[OK]   .env configured
+
+▶ 6/9  Rendering configs from models.yaml
+Rendering configs from models.yaml ...
+  [OK] litellm/config.yaml
+  [OK] ollama/init-models.sh
+
+Done. Apply changes with:
+  docker compose restart litellm     # after model changes
+  docker compose restart ollama-init # to pull new Ollama models
+[OK]   Configs rendered (litellm/config.yaml + ollama/init-models.sh)
+
+▶ 7/9  Validating docker-compose.yml
+[OK]   docker-compose.yml is valid
+
+▶ 8/9  Starting services
+[--]   Pulling Docker images...
+ Container litellm Running
+ Container ollama Running
+ Container ollama-init Running
+ Container ollama Waiting
+ Container ollama Waiting
+ Container ollama Healthy
+ Container ollama Healthy
+ Container litellm Waiting
+ Container ollama Waiting
+ Container ollama-init Waiting
+ Container ollama-init Healthy
+container litellm is unhealthy
+ Container ollama Running
+ Container ollama-init Running
+ Container litellm Running
+ Container ollama Waiting
+ Container ollama Waiting
+ Container ollama Healthy
+ Container ollama Healthy
+[OK]   Containers started
+
+▶ 9/9  Health check & auto-fix
+
+[--]   Waiting for services to become healthy (timeout: 300s)
+[--]     [0s] waiting on: litellm
+[--]     [10s] waiting on: litellm
+[--]     [20s] waiting on: litellm
+[--]     [30s] waiting on: litellm
+[--]     [40s] waiting on: litellm
+[--]     [50s] waiting on: litellm
+
+shunaqib qotib qolyapti
+logi esa ollama       | [GIN] 2026/06/29 - 04:36:06 | 200 |      81.352µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:36:16 | 200 |      58.419µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:36:16 | 200 |      95.819µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:36:26 | 200 |      28.022µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:36:26 | 200 |      98.013µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:36:36 | 200 |      52.629µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:36:36 | 200 |      75.471µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:36:46 | 200 |      18.715µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:36:46 | 200 |      81.822µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:36:56 | 200 |      49.563µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:36:56 | 200 |      97.442µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+####################################################################################
+keyen nega  ollama-init da gpu nvidia smi yo'q ollamada esa gpu ko'rinyapti?

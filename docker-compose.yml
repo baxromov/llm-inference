@@ -19,7 +19,6 @@ volumes:
   ollama_data:
 
 services:
-
   # ── 1. OLLAMA ── LLM runner ───────────────────────────────────────────────
   ollama:
     image: ollama/ollama:0.6.5
@@ -87,7 +86,8 @@ services:
       - UI_USERNAME=${LITELLM_UI_USERNAME}
       - UI_PASSWORD=${LITELLM_UI_PASSWORD}
       - LITELLM_TELEMETRY=false
-    command: ["--config", "/app/config.yaml", "--port", "8080", "--num_workers", "1"]
+    command:
+      ["--config", "/app/config.yaml", "--port", "8080", "--num_workers", "1"]
     ports:
       - "8080:8080"
     logging:
