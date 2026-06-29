@@ -143,142 +143,51 @@ configure_nvidia_runtime() {
   ok "nvidia runtime configured and Docker restarted"
 }
 
-# Add the official NVIDIA CUDA apt repo (developer.download.nvidia.com).
-# This is separate from the nvidia-container-toolkit repo and provides
-# libcuda1-<version> and cuda-drivers packages.
-add_cuda_apt_repo() {
-  local arch; arch=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
-  local os_id; os_id=$(. /etc/os-release 2>/dev/null && echo "${ID:-ubuntu}")
-  local codename; codename=$(. /etc/os-release 2>/dev/null && echo "${VERSION_CODENAME:-jammy}")
-
-  # Map distro+codename → NVIDIA CUDA repo identifier.
-  # Debian Trixie (13/testing) and Sid have no dedicated repo — use debian12.
-  local repo_id
-  case "${os_id}:${codename}" in
-    ubuntu:noble)            repo_id="ubuntu2404" ;;
-    ubuntu:jammy)            repo_id="ubuntu2204" ;;
-    ubuntu:focal)            repo_id="ubuntu2004" ;;
-    debian:bookworm)         repo_id="debian12"   ;;
-    debian:trixie|debian:sid|debian:*) repo_id="debian12" ;;
-    *)                       repo_id="ubuntu2204" ;;  # safe fallback
-  esac
-
-  if dpkg -l cuda-keyring 2>/dev/null | grep -q "^ii"; then
-    return 0  # already added
+# Ensure GPU compute works in containers using CDI (Container Device Interface).
+#
+# WHY CDI instead of Debian's libcuda1 package:
+#   Installing libcuda1 from Debian repos can produce CUDA_ERROR_SYSTEM_DRIVER_MISMATCH
+#   (error 802) when the Debian-packaged library doesn't exactly match the kernel
+#   module installed via Proxmox/DKMS/.run — even if version strings look identical.
+#   CDI reads directly from the actual driver files on disk, bypassing ldconfig
+#   and Debian package management entirely, so it always finds the correct library.
+check_and_fix_cuda_libraries() {
+  # 1. CDI spec already present and non-empty — nothing to do
+  if [[ -s /etc/cdi/nvidia.yaml ]]; then
+    ok "CDI spec present — GPU libraries mapped via nvidia-ctk cdi"
+    return 0
   fi
 
-  fixing "Adding NVIDIA CUDA apt repository (${repo_id}/${arch})..."
-  local keyring_url="https://developer.download.nvidia.com/compute/cuda/repos/${repo_id}/${arch}/cuda-keyring_1.1-1_all.deb"
-  if wget -q -O /tmp/cuda-keyring.deb "$keyring_url" 2>/dev/null \
-     && $SUDO dpkg -i /tmp/cuda-keyring.deb 2>/dev/null; then
-    rm -f /tmp/cuda-keyring.deb
-    ok "CUDA apt repo added (${repo_id})"
-  else
-    rm -f /tmp/cuda-keyring.deb
-    warn "Could not add CUDA apt repo (URL: ${keyring_url})"
+  # 2. Generate CDI spec from the actual NVIDIA driver installation on this host
+  if ! command -v nvidia-ctk >/dev/null 2>&1; then
+    warn "nvidia-ctk not found — cannot generate CDI spec"
     return 1
   fi
-}
 
-# Refresh the GPG key for the nvidia-container-toolkit repo if it is expired/missing.
-# Symptom: "Missing key C95B321B61E88C1809C4F759DDCAE044F796ECB0" in apt-get update output.
-fix_nvidia_container_toolkit_key() {
-  local key_file="/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
-  if [[ ! -f "$key_file" ]]; then
-    return 0  # repo not configured here — skip
-  fi
-  local update_out
-  update_out=$($SUDO apt-get update 2>&1 || true)
-  if echo "$update_out" | grep -q "nvidia.github.io.*Missing key\|nvidia.github.io.*NO_PUBKEY"; then
-    fixing "Refreshing expired NVIDIA container-toolkit repo GPG key..."
-    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
-      $SUDO gpg --dearmor -o "$key_file" --yes 2>/dev/null
-    ok "NVIDIA container-toolkit repo key refreshed"
-  fi
-}
+  fixing "Generating CDI spec from installed NVIDIA driver..."
+  $SUDO mkdir -p /etc/cdi
 
-# Ensure libcuda.so.1 (CUDA driver bridge) exists on the host.
-# Without it, nvidia-container-toolkit can't inject CUDA compute into containers
-# even when runtime: nvidia is set — nvidia-smi shows "CUDA Version: N/A" and
-# Ollama reports "no compatible GPUs were discovered".
-check_and_fix_cuda_libraries() {
-  # 1. Already in ldconfig cache — ideal
-  if ldconfig -p 2>/dev/null | grep -q "libcuda.so.1"; then
-    ok "CUDA driver library (libcuda.so.1) found on host"
-    return 0
-  fi
-
-  # 2. Exists on disk but not in ldconfig — just refresh the cache
-  local libcuda_path
-  libcuda_path=$(find /usr /opt /run -name "libcuda.so.1" 2>/dev/null | head -1)
-  if [[ -n "$libcuda_path" ]]; then
-    local libcuda_dir; libcuda_dir=$(dirname "$libcuda_path")
-    warn "libcuda.so.1 found at ${libcuda_path} but missing from ldconfig cache"
-    if [[ $AUTO_FIX -eq 1 ]]; then
-      fixing "Adding ${libcuda_dir} to /etc/ld.so.conf.d/nvidia-cuda.conf..."
-      echo "$libcuda_dir" | $SUDO tee /etc/ld.so.conf.d/nvidia-cuda.conf >/dev/null
-      $SUDO ldconfig
-      ok "libcuda.so.1 registered in ldconfig"
-      LIBCUDA_JUST_INSTALLED=1
-    fi
-    return 0
-  fi
-
-  # 3. Completely missing — try to install the driver userspace package
-  warn "libcuda.so.1 NOT found on host — CUDA compute won't work in containers"
-  warn "This is why Ollama logs 'no compatible GPUs were discovered'"
-
-  if [[ $AUTO_FIX -eq 0 ]]; then
-    fatal "libcuda.so.1 missing.\n  Fix: sudo apt-get install -y cuda-drivers\n  Then re-run ./deploy.sh"
-  fi
-
-  local driver_major
-  driver_major=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null \
-    | head -1 | cut -d. -f1)
-
-  fixing "Installing CUDA driver userspace libraries (driver: ${driver_major})..."
-
+  # Remove any Debian-packaged libcuda that may mismatch the kernel module.
+  # This ensures CDI generation finds ONLY the libraries from the actual driver
+  # install (DKMS/.run) rather than Debian's potentially patched versions.
   if [[ "$PKG_MGR" == "apt" ]]; then
-    # Fix any expired GPG keys before running apt-get update
-    fix_nvidia_container_toolkit_key
-    $SUDO apt-get update -qq 2>/dev/null || true
-
-    # Pass 1: try from already-configured repos (Debian non-free often has libcuda1)
-    if $SUDO apt-get install -y -qq "libcuda1" 2>/dev/null \
-       || $SUDO apt-get install -y -qq "libcuda1-${driver_major}" 2>/dev/null; then
+    if dpkg -l libcuda1 2>/dev/null | grep -q "^ii"; then
+      fixing "Removing Debian libcuda1 to prevent driver mismatch (error 802)..."
+      $SUDO apt-get remove --purge -y libcuda1 libnvidia-pkcs11-openssl3 \
+        libnvidia-ptxjitcompiler1 libnvidia-cfg1 nvidia-persistenced 2>/dev/null || true
       $SUDO ldconfig
-      if ldconfig -p 2>/dev/null | grep -q "libcuda.so.1"; then
-        ok "libcuda.so.1 installed from existing repos"
-        return 0
-      fi
     fi
+  fi
 
-    # Pass 2: add NVIDIA CUDA apt repo and retry
-    add_cuda_apt_repo
-    $SUDO apt-get update -qq 2>/dev/null || true
-
-    $SUDO apt-get install -y -qq "libcuda1-${driver_major}" 2>/dev/null \
-    || $SUDO apt-get install -y -qq "libcuda1" 2>/dev/null \
-    || $SUDO apt-get install -y -qq "cuda-drivers-${driver_major}" 2>/dev/null \
-    || $SUDO apt-get install -y -qq cuda-drivers 2>/dev/null \
-    || {
-      warn "Auto-install failed. Manual steps to fix on this server:"
-      warn "  arch=\$(dpkg --print-architecture)"
-      warn "  wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/\${arch}/cuda-keyring_1.1-1_all.deb"
-      warn "  sudo dpkg -i cuda-keyring_1.1-1_all.deb"
-      warn "  sudo apt-get update && sudo apt-get install -y libcuda1-${driver_major}"
-      warn "  Then re-run ./deploy.sh"
-      return 1
-    }
-    $SUDO ldconfig
-    if ldconfig -p 2>/dev/null | grep -q "libcuda.so.1"; then
-      ok "libcuda.so.1 installed and registered"
-      LIBCUDA_JUST_INSTALLED=1
-    else
-      warn "Package installed but libcuda.so.1 still not in ldconfig — CUDA may still fail"
-    fi
+  if $SUDO nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml 2>/dev/null \
+     && [[ -s /etc/cdi/nvidia.yaml ]]; then
+    local lines; lines=$(wc -l < /etc/cdi/nvidia.yaml)
+    ok "CDI spec generated (${lines} lines) — GPU libraries mapped from actual driver"
+    LIBCUDA_JUST_INSTALLED=1
   else
-    warn "Non-apt system: install CUDA driver libraries manually, then re-run."
+    warn "CDI spec generation failed."
+    warn "Manual fix: sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml"
+    warn "Then re-run: ./deploy.sh"
     return 1
   fi
 }
