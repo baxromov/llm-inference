@@ -1,20 +1,146 @@
-## RUN ON SERVER — fix storage then deploy:
+root@gpusrv02:/opt/llm-inference# ./scripts/setup-ollama.sh models
 
-# 1. Clean up failed partial download (freeing space on /)
-rm -rf /root/.ollama/models/blobs/*-partial-* 2>/dev/null; rm -rf /root/.ollama/models/blobs/sha256-f5* 2>/dev/null
+▶ Models
 
-# 2. Deploy — this configures OLLAMA_MODELS=/data/ollama/models and restarts service
-git pull && ./deploy.sh 2>&1 | tee /tmp/out.txt
+NAME               ID              SIZE      MODIFIED
+llama3.2:latest    a80c4f17acd5    2.0 GB    19 minutes ago
+qwen3.6:27b        a50eda8ed977    17 GB     42 minutes ago
 
-# 3. Capture status
-echo "=== OLLAMA SERVICE ===" >> /tmp/out.txt
-systemctl status ollama --no-pager | head -15 >> /tmp/out.txt
-echo "=== OLLAMA ENV ===" >> /tmp/out.txt
-systemctl show ollama --property=Environment >> /tmp/out.txt
-echo "=== OLLAMA LIST ===" >> /tmp/out.txt
-ollama list >> /tmp/out.txt
-echo "=== DISK USAGE ===" >> /tmp/out.txt
-df -h /data / >> /tmp/out.txt
-echo "=== DOCKER ===" >> /tmp/out.txt
-docker ps >> /tmp/out.txt
-cp /tmp/out.txt shared.txt; git add shared.txt && git commit -m "deploy output" && git push
+[OK]   2 model(s) found in Ollama
+
+▶ Loaded models — GPU / CPU allocation
+
+NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL
+
+./scripts/setup-ollama.sh: line 206: [[: 0
+0: syntax error in expression (error token is "0")
+[--]   No models currently loaded (will load on first request).
+root@gpusrv02:/opt/llm-inference# ./scripts/setup-ollama.sh
+
+╔══════════════════════════════════════════════════════╗
+║   Ollama GPU Setup — Full Install + Configure       ║
+╚══════════════════════════════════════════════════════╝
+
+▶ GPU
+[OK]   Found 2 GPU(s):
+       GPU0 │ NVIDIA A100-SXM4-80GB │ VRAM total: 81920 MiB free: 81038 MiB │ driver 550.163.01
+       GPU1 │ NVIDIA A100-SXM4-80GB │ VRAM total: 81920 MiB free: 81038 MiB │ driver 550.163.01
+[OK]   libcuda found:   libcuda.so.1 (libc6,x86-64) => /lib/x86_64-linux-gnu/libcuda.so.1
+
+▶ Ollama installation
+[OK]   Ollama 0.30.11 already installed at /usr/local/bin/ollama
+
+▶ Systemd service — GPU-only configuration
+[OK]   /data has 2735 GB free — models dir: /data/ollama
+[FIX]  Writing /etc/systemd/system/ollama.service.d/override.conf ...
+[OK]   override.conf written
+
+▶ Starting Ollama service
+[FIX]  Service running — restarting to apply new config...
+[--]   Waiting for Ollama API (http://localhost:11434)...
+[OK]   Ollama API is ready
+
+▶ Models
+
+NAME    ID    SIZE    MODIFIED
+
+[OK]   0
+0 model(s) found in Ollama
+
+▶ Loaded models — GPU / CPU allocation
+
+NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL
+
+./scripts/setup-ollama.sh: line 206: [[: 0
+0: syntax error in expression (error token is "0")
+[--]   No models currently loaded (will load on first request).
+
+▶ GPU utilization
+
+── Per-GPU summary ──────────────────────────────────────────
+  GPU0 │  NVIDIA A100-SXM4-80GB         │ VRAM  1 MiB /  81920 MiB │ Util  0 % │  29°C │  55.92 W
+  GPU1 │  NVIDIA A100-SXM4-80GB         │ VRAM  1 MiB /  81920 MiB │ Util  0 % │  30°C │  57.00 W
+
+── Processes using GPU ──────────────────────────────────────
+[--]   No GPU compute processes right now (models not yet loaded into VRAM).
+[--]   Processes appear here after a model is loaded via a request.
+
+── Active Ollama environment (CUDA vars) ────────────────────
+  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin OLLAMA_HOST=0.0.0.0:11434 OLLAMA_MODELS=/data/ollama CUDA_VISIBLE_DEVICES=all OLLAMA_FLASH_ATTENTION=1 OLLAMA_KEEP_ALIVE=24h OLLAMA_NUM_PARALLEL=4 OLLAMA_MAX_LOADED_MODELS=3 OLLAMA_SCHED_SPREAD=1
+[OK]   CUDA_VISIBLE_DEVICES=all is active in the service
+
+
+╔══════════════════════════════════════════════════════╗
+║  Ollama is running on GPU                           ║
+╠══════════════════════════════════════════════════════╣
+║  API          → http://localhost:11434              ║
+║  Models dir   → /data/ollama
+║  Logs         → sudo journalctl -u ollama -f       ║
+║  GPU watch    → watch -n2 nvidia-smi               ║
+╚══════════════════════════════════════════════════════╝
+
+root@gpusrv02:/opt/llm-inference# ./scripts/setup-ollama.sh models
+
+▶ Models
+
+NAME    ID    SIZE    MODIFIED
+
+[OK]   0
+0 model(s) found in Ollama
+
+▶ Loaded models — GPU / CPU allocation
+
+NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL
+
+./scripts/setup-ollama.sh: line 206: [[: 0
+0: syntax error in expression (error token is "0")
+[--]   No models currently loaded (will load on first request).
+root@gpusrv02:/opt/llm-inference# ./scripts/setup-ollama.sh check
+
+── Ollama GPU check ──────────────────────────────────────
+
+▶ GPU
+[OK]   Found 2 GPU(s):
+       GPU0 │ NVIDIA A100-SXM4-80GB │ VRAM total: 81920 MiB free: 81038 MiB │ driver 550.163.01
+       GPU1 │ NVIDIA A100-SXM4-80GB │ VRAM total: 81920 MiB free: 81038 MiB │ driver 550.163.01
+[OK]   libcuda found:   libcuda.so.1 (libc6,x86-64) => /lib/x86_64-linux-gnu/libcuda.so.1
+
+▶ Ollama service status
+[OK]   Ollama 0.30.11 installed
+[OK]   ollama.service is active
+[OK]   systemd override.conf exists
+       # ── GPU — force CUDA, expose all GPUs ──────────────────────────────────────
+       # CUDA_VISIBLE_DEVICES=all  tells the CUDA runtime to see every GPU.
+       Environment="CUDA_VISIBLE_DEVICES=all"
+       Environment="OLLAMA_FLASH_ATTENTION=1"
+
+▶ Models
+
+NAME    ID    SIZE    MODIFIED
+
+[OK]   0
+0 model(s) found in Ollama
+
+▶ Loaded models — GPU / CPU allocation
+
+NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL
+
+./scripts/setup-ollama.sh: line 206: [[: 0
+0: syntax error in expression (error token is "0")
+[--]   No models currently loaded (will load on first request).
+
+▶ GPU utilization
+
+── Per-GPU summary ──────────────────────────────────────────
+  GPU0 │  NVIDIA A100-SXM4-80GB         │ VRAM  1 MiB /  81920 MiB │ Util  0 % │  29°C │  55.92 W
+  GPU1 │  NVIDIA A100-SXM4-80GB         │ VRAM  1 MiB /  81920 MiB │ Util  0 % │  30°C │  57.00 W
+
+── Processes using GPU ──────────────────────────────────────
+[--]   No GPU compute processes right now (models not yet loaded into VRAM).
+[--]   Processes appear here after a model is loaded via a request.
+
+── Active Ollama environment (CUDA vars) ────────────────────
+  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin OLLAMA_HOST=0.0.0.0:11434 OLLAMA_MODELS=/data/ollama CUDA_VISIBLE_DEVICES=all OLLAMA_FLASH_ATTENTION=1 OLLAMA_KEEP_ALIVE=24h OLLAMA_NUM_PARALLEL=4 OLLAMA_MAX_LOADED_MODELS=3 OLLAMA_SCHED_SPREAD=1
+[OK]   CUDA_VISIBLE_DEVICES=all is active in the service
+
+root@gpusrv02:/opt/llm-inference#
