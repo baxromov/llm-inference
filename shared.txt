@@ -35,3 +35,6 @@ root@gpusrv02:~# docker exec -it 86ba6ee1ce52 /bin/bash
 root@86ba6ee1ce52:/# nvidia-smi
 bash: nvidia-smi: command not found
 root@86ba6ee1ce52:/#
+## RUN THIS ON THE SERVER:
+
+git pull && ./deploy.sh 2>&1 | tee /tmp/deploy_out.txt; echo "=== OLLAMA GPU CHECK ===" >> /tmp/deploy_out.txt; docker exec ollama ollama list 2>&1 >> /tmp/deploy_out.txt; docker logs ollama 2>&1 | grep -E "library=|cuda|GPU|gpu|error 802|CUDA" | head -20 >> /tmp/deploy_out.txt; echo "=== CDI SPEC FIRST 10 ===" >> /tmp/deploy_out.txt; head -10 /etc/cdi/nvidia.yaml 2>/dev/null >> /tmp/deploy_out.txt; cp /tmp/deploy_out.txt shared.txt; git add shared.txt && git commit -m "deploy output" && git push
