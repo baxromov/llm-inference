@@ -32,7 +32,7 @@ step()  { echo ""; echo -e "${BOLD}${CYAN}▶ $1${NC}"; }
 SUDO=""
 [[ $EUID -ne 0 ]] && SUDO="sudo"
 
-MODELS_DIR="/data/ollama/models"
+MODELS_DIR="/data/ollama"
 OVERRIDE_DIR="/etc/systemd/system/ollama.service.d"
 CMD="${1:-install}"
 
