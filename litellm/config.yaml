@@ -30,6 +30,14 @@ model_list:
       model: ollama_chat/qwen3.6:27b
       api_base: http://host.docker.internal:11434
 
+  # GPT-OSS 120B
+  - model_name: gpt-oss-120b
+    litellm_params:
+      model: ollama_chat/gpt-oss:120b
+      api_base: http://host.docker.internal:11434
+      stream_timeout: 600
+      timeout: 600
+
 # ── LITELLM SETTINGS ─────────────────────────────────────────────────────────
 # Edit this file to change LiteLLM proxy behavior.
 # DO NOT edit litellm/config.yaml — it is auto-generated from models.yaml.

@@ -5,12 +5,15 @@ set -e
 OLLAMA_HOST="${OLLAMA_HOST:-http://ollama:11434}"
 
 echo "==> Waiting for Ollama at ${OLLAMA_HOST}..."
-until curl -sf "${OLLAMA_HOST}/api/tags" > /dev/null; do
+until ollama list > /dev/null 2>&1; do
   sleep 5
 done
 
 echo "==> Pulling qwen3.6:27b  (Qwen 3.6 27B — 17 GB VRAM, 256K context, text + vision)"
 ollama pull qwen3.6:27b
+
+echo "==> Pulling gpt-oss:120b  (GPT-OSS 120B)"
+ollama pull gpt-oss:120b
 
 echo "==> Done. Loaded models:"
 ollama list
