@@ -1,20 +1,35 @@
-## RUN ON SERVER — fix missing models then verify GPU:
+## RUN ON SERVER — force GPU, diagnose, and verify:
 
 # 1. Pull latest fixes
 git pull
 
-# 2. Re-run setup — this will migrate /root/.ollama/models → /data/ollama automatically
+# 2. Full reconfigure (fixes permissions, adds LD_LIBRARY_PATH, migrates models)
 ./scripts/setup-ollama.sh
 
-# 3. Capture status
-echo "=== OLLAMA LIST ===" > /tmp/out.txt
-ollama list >> /tmp/out.txt
-echo "=== OLLAMA PS ===" >> /tmp/out.txt
-ollama ps >> /tmp/out.txt
-echo "=== GPU ===" >> /tmp/out.txt
-nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu --format=csv,noheader >> /tmp/out.txt
-echo "=== DISK /data ===" >> /tmp/out.txt
-df -h /data >> /tmp/out.txt
-echo "=== /data/ollama contents ===" >> /tmp/out.txt
-ls -lh /data/ollama/ >> /tmp/out.txt 2>&1
-cp /tmp/out.txt shared.txt; git add shared.txt && git commit -m "server status" && git push
+# 3. Check CUDA runners and logs
+./scripts/setup-ollama.sh check
+
+# 4. THE DEFINITIVE TEST — loads a model and confirms "100% GPU" in ollama ps
+./scripts/setup-ollama.sh test-gpu
+
+# 5. Capture everything
+{
+  echo "=== OLLAMA LIST ==="
+  ollama list
+  echo "=== OLLAMA PS ==="
+  ollama ps
+  echo "=== CUDA RUNNERS ==="
+  ls /usr/local/lib/ollama/runners/ 2>/dev/null || echo "dir not found"
+  echo "=== GPU ==="
+  nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu --format=csv,noheader
+  echo "=== GPU PROCESSES ==="
+  nvidia-smi --query-compute-apps=pid,name,used_gpu_memory --format=csv,noheader
+  echo "=== OLLAMA SERVICE USER ==="
+  systemctl show ollama --property=User
+  echo "=== DATA/OLLAMA OWNER ==="
+  ls -la /data/ollama/ | head -5
+  echo "=== JOURNAL GPU LINES ==="
+  journalctl -u ollama --no-pager -n 50 | grep -iE "cuda|gpu|runner|layer|cpu" | tail -20
+} > /tmp/out.txt 2>&1
+cat /tmp/out.txt
+cp /tmp/out.txt shared.txt; git add shared.txt && git commit -m "gpu test output" && git push
