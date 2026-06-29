@@ -21,7 +21,7 @@ volumes:
 services:
   # ── 1. OLLAMA ── LLM runner ───────────────────────────────────────────────
   ollama:
-    image: ollama/ollama:0.6.5
+    image: ollama/ollama:latest
     container_name: ollama
     restart: unless-stopped
     runtime: nvidia
@@ -52,7 +52,7 @@ services:
   # ── 1b. OLLAMA INIT ── one-shot: pulls models then exits ─────────────────
   # Generated from models.yaml — run ./deploy.sh render to regenerate
   ollama-init:
-    image: ollama/ollama:0.6.5
+    image: ollama/ollama:latest
     container_name: ollama-init
     restart: on-failure:3
     networks:
@@ -96,7 +96,7 @@ services:
         max-size: "100m"
         max-file: "3"
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8080/"]
+      test: ["CMD-SHELL", "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8080/\")'"]
       interval: 30s
       timeout: 10s
       retries: 5

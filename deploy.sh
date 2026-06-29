@@ -152,58 +152,39 @@ configure_nvidia_runtime() {
 #   CDI reads directly from the actual driver files on disk, bypassing ldconfig
 #   and Debian package management entirely, so it always finds the correct library.
 check_and_fix_cuda_libraries() {
-  # Remove Debian-packaged libcuda which mismatches the Proxmox DKMS kernel module
-  # (error 802: CUDA_ERROR_SYSTEM_DRIVER_MISMATCH) even when version strings match.
-  if [[ "$PKG_MGR" == "apt" ]]; then
-    if dpkg -l libcuda1 2>/dev/null | grep -q "^ii"; then
-      fixing "Removing Debian libcuda1 to prevent driver mismatch (error 802)..."
-      $SUDO apt-get remove --purge -y libcuda1 libnvidia-pkcs11-openssl3 \
-        libnvidia-ptxjitcompiler1 libnvidia-cfg1 nvidia-persistenced 2>/dev/null || true
-      $SUDO ldconfig
-    fi
-  fi
-
-  # Generate CDI spec if missing
-  if [[ ! -s /etc/cdi/nvidia.yaml ]]; then
-    if ! command -v nvidia-ctk >/dev/null 2>&1; then
-      warn "nvidia-ctk not found — cannot generate CDI spec"
-      return 1
-    fi
-    fixing "Generating CDI spec from installed NVIDIA driver..."
-    $SUDO mkdir -p /etc/cdi
-    if $SUDO nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml 2>/dev/null \
-       && [[ -s /etc/cdi/nvidia.yaml ]]; then
-      local lines; lines=$(wc -l < /etc/cdi/nvidia.yaml)
-      ok "CDI spec generated (${lines} lines)"
-      LIBCUDA_JUST_INSTALLED=1
-    else
-      warn "CDI spec generation failed."
-      warn "Manual fix: sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml"
-      return 1
-    fi
-  else
-    ok "CDI spec present ($(wc -l < /etc/cdi/nvidia.yaml) lines)"
-  fi
-
-  # Ensure libcuda.so.1 exists in the ldconfig path so 'runtime: nvidia' can inject it.
-  # After purging Debian's libcuda1, the symlink is gone. Read the actual path from the
-  # CDI spec (which points to the real DKMS driver binary) and recreate the symlink.
-  if ! ldconfig -p 2>/dev/null | grep -q "libcuda.so.1"; then
-    local libcuda_actual
-    libcuda_actual=$(grep -E "hostPath.*libcuda\.so\." /etc/cdi/nvidia.yaml 2>/dev/null \
-      | head -1 | sed 's/.*hostPath:[[:space:]]*//' | tr -d "'\"\r\n " )
-    if [[ -n "$libcuda_actual" && -f "$libcuda_actual" ]]; then
-      fixing "Recreating libcuda.so.1 symlink → $libcuda_actual"
-      $SUDO ln -sf "$libcuda_actual" /usr/lib/x86_64-linux-gnu/libcuda.so.1
-      $SUDO ldconfig
-      ok "libcuda.so.1 symlink created — runtime: nvidia can now inject CUDA"
-      LIBCUDA_JUST_INSTALLED=1
-    else
-      warn "libcuda.so.1 not in ldconfig and CDI spec path not found — GPU may run on CPU"
-      warn "Run: grep -i libcuda /etc/cdi/nvidia.yaml | head -5"
-    fi
-  else
+  # 'runtime: nvidia' needs libcuda.so.1 registered in ldconfig on the HOST so the
+  # nvidia-container-cli can inject it into containers. Without it, nvidia-smi works
+  # (device nodes present) but CUDA is N/A and ollama falls back to CPU.
+  if ldconfig -p 2>/dev/null | grep -q "libcuda.so.1"; then
     ok "libcuda.so.1 registered in ldconfig"
+    return 0
+  fi
+
+  # libcuda.so.1 missing — install it
+  if [[ "$PKG_MGR" == "apt" ]]; then
+    fixing "Installing libcuda1 (CUDA driver bridge for container injection)..."
+    $SUDO apt-get install -y -q libcuda1 2>/dev/null || true
+    $SUDO ldconfig
+    if ldconfig -p 2>/dev/null | grep -q "libcuda.so.1"; then
+      ok "libcuda.so.1 installed via libcuda1"
+      LIBCUDA_JUST_INSTALLED=1
+      return 0
+    fi
+  fi
+
+  # Fallback: search for any versioned libcuda.so on disk and symlink it
+  local libcuda_path
+  libcuda_path=$(find /usr/lib/x86_64-linux-gnu /usr/local/lib -maxdepth 5 \
+    -name "libcuda.so.*.*" 2>/dev/null | sort -V | tail -1)
+  if [[ -n "$libcuda_path" && -f "$libcuda_path" ]]; then
+    fixing "Symlinking libcuda.so.1 → $libcuda_path"
+    $SUDO ln -sf "$libcuda_path" /usr/lib/x86_64-linux-gnu/libcuda.so.1
+    $SUDO ldconfig
+    ok "libcuda.so.1 symlinked — CUDA injection should work"
+    LIBCUDA_JUST_INSTALLED=1
+  else
+    warn "libcuda.so.1 not found — ollama will run on CPU"
+    warn "Fix: apt-get install libcuda1  then  ./deploy.sh"
   fi
 }
 
