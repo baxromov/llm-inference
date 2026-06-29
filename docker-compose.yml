@@ -16,12 +16,37 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
+  # ── POSTGRES ── Required for LiteLLM UI login and user management ──────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: litellm-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=litellm
+      - POSTGRES_USER=litellm
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "2"
+
   # ── LITELLM PROXY ── OpenAI-compatible API gateway + built-in UI ──────────
   # config.yaml is auto-generated from models.yaml — run ./deploy.sh render
   litellm:
     image: ghcr.io/berriai/litellm:main-stable
     container_name: litellm
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -32,9 +57,10 @@ services:
       - UI_USERNAME=${LITELLM_UI_USERNAME}
       - UI_PASSWORD=${LITELLM_UI_PASSWORD}
       - LITELLM_TELEMETRY=false
+      - DATABASE_URL=postgresql://litellm:${POSTGRES_PASSWORD}@postgres:5432/litellm
     command: ["--config", "/app/config.yaml", "--port", "8080", "--num_workers", "1"]
     ports:
-      - "8080:8080"
+      - "80:8080"
     logging:
       driver: json-file
       options:
@@ -46,3 +72,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+
+volumes:
+  postgres_data:

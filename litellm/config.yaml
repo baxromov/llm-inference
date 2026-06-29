@@ -11,24 +11,24 @@ model_list:
   - model_name: qwen3.6-27b
     litellm_params:
       model: ollama_chat/qwen3.6:27b
-      api_base: http://ollama:11434
+      api_base: http://host.docker.internal:11434
       stream_timeout: 300
       timeout: 300
 
   - model_name: gpt-4
     litellm_params:
       model: ollama_chat/qwen3.6:27b
-      api_base: http://ollama:11434
+      api_base: http://host.docker.internal:11434
 
   - model_name: gpt-4o
     litellm_params:
       model: ollama_chat/qwen3.6:27b
-      api_base: http://ollama:11434
+      api_base: http://host.docker.internal:11434
 
   - model_name: gpt-3.5-turbo
     litellm_params:
       model: ollama_chat/qwen3.6:27b
-      api_base: http://ollama:11434
+      api_base: http://host.docker.internal:11434
 
 # ── LITELLM SETTINGS ─────────────────────────────────────────────────────────
 # Edit this file to change LiteLLM proxy behavior.
