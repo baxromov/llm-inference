@@ -21,10 +21,14 @@ root@gpusrv02:/opt/llm-inference# ./deploy.sh
 [!!]   libcuda.so.1 NOT found on host — CUDA compute won't work in containers
 [!!]   This is why Ollama logs 'no compatible GPUs were discovered'
 [FIX]  Installing CUDA driver userspace libraries (driver: 550)...
-W: OpenPGP signature verification failed: https://nvidia.github.io/libnvidia-container/stable/deb/amd64  InRelease: Sub-process /usr/bin/sqv returned an error code (1), error message is: Missing key C95B321B61E88C1809C4F759DDCAE044F796ECB0, which is needed to verify signature.
+[FIX]  Refreshing expired NVIDIA container-toolkit repo GPG key...
+[OK]   NVIDIA container-toolkit repo key refreshed
+[FIX]  Adding NVIDIA CUDA apt repository (trixie/amd64)...
+[!!]   Could not add CUDA apt repo (URL: https://developer.download.nvidia.com/compute/cuda/repos/trixie/amd64/cuda-keyring_1.1-1_all.deb)
 [!!]   Auto-install failed. Manual fix:
-[!!]     sudo apt-get install -y cuda-drivers
-[!!]     Or add the CUDA repo: https://developer.nvidia.com/cuda-downloads
+[!!]     wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+[!!]     sudo dpkg -i cuda-keyring_1.1-1_all.deb && sudo apt-get update
+[!!]     sudo apt-get install -y libcuda1-550
 
 ▶ 4/9  Disk space
 [OK]   Disk: 2758 GB free on /data/docker
@@ -47,9 +51,10 @@ Done. Apply changes with:
 
 ▶ 8/9  Starting services
 [--]   Pulling Docker images...
-[+] up 0/1
- ⠦ Container ollama Starting                                                                                                                                                                                13.5s
-^C[OK]   Containers started
+[+] up 1/1
+ ✘ Container ollama Error dependency ollama failed to start                                                                                                                                                  0.5s
+dependency failed to start: container ollama is unhealthy
+[OK]   Containers started
 
 ▶ 9/9  Health check & auto-fix
 
