@@ -304,6 +304,10 @@ YAML
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+ollama_gpu() {
+  bash scripts/setup-ollama.sh "${1:-check}"
+}
+
 update_images() {
   echo ""
   info "Pulling latest versions of pinned images..."
@@ -335,6 +339,7 @@ help() {
   echo "    apply-models     re-render configs from models.yaml + restart services"
   echo "    update-images    pull latest pinned Docker images"
   echo "    shell <svc>      open an interactive shell in a container"
+  echo "    ollama-gpu       check/install Ollama GPU-only config"
   echo ""
   echo "  Services: ollama  ollama-init  litellm"
   echo ""
@@ -358,6 +363,7 @@ case "$CMD" in
   apply-models)  apply_models ;;
   update-images) update_images ;;
   shell)         shell_svc "$@" ;;
+  ollama-gpu)    ollama_gpu "${1:-check}" ;;
   help|--help|-h) help ;;
   *)
     warn "Unknown command: ${CMD}"
