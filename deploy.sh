@@ -152,24 +152,8 @@ configure_nvidia_runtime() {
 #   CDI reads directly from the actual driver files on disk, bypassing ldconfig
 #   and Debian package management entirely, so it always finds the correct library.
 check_and_fix_cuda_libraries() {
-  # 1. CDI spec already present and non-empty — nothing to do
-  if [[ -s /etc/cdi/nvidia.yaml ]]; then
-    ok "CDI spec present — GPU libraries mapped via nvidia-ctk cdi"
-    return 0
-  fi
-
-  # 2. Generate CDI spec from the actual NVIDIA driver installation on this host
-  if ! command -v nvidia-ctk >/dev/null 2>&1; then
-    warn "nvidia-ctk not found — cannot generate CDI spec"
-    return 1
-  fi
-
-  fixing "Generating CDI spec from installed NVIDIA driver..."
-  $SUDO mkdir -p /etc/cdi
-
-  # Remove any Debian-packaged libcuda that may mismatch the kernel module.
-  # This ensures CDI generation finds ONLY the libraries from the actual driver
-  # install (DKMS/.run) rather than Debian's potentially patched versions.
+  # Remove Debian-packaged libcuda which mismatches the Proxmox DKMS kernel module
+  # (error 802: CUDA_ERROR_SYSTEM_DRIVER_MISMATCH) even when version strings match.
   if [[ "$PKG_MGR" == "apt" ]]; then
     if dpkg -l libcuda1 2>/dev/null | grep -q "^ii"; then
       fixing "Removing Debian libcuda1 to prevent driver mismatch (error 802)..."
@@ -179,16 +163,47 @@ check_and_fix_cuda_libraries() {
     fi
   fi
 
-  if $SUDO nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml 2>/dev/null \
-     && [[ -s /etc/cdi/nvidia.yaml ]]; then
-    local lines; lines=$(wc -l < /etc/cdi/nvidia.yaml)
-    ok "CDI spec generated (${lines} lines) — GPU libraries mapped from actual driver"
-    LIBCUDA_JUST_INSTALLED=1
+  # Generate CDI spec if missing
+  if [[ ! -s /etc/cdi/nvidia.yaml ]]; then
+    if ! command -v nvidia-ctk >/dev/null 2>&1; then
+      warn "nvidia-ctk not found — cannot generate CDI spec"
+      return 1
+    fi
+    fixing "Generating CDI spec from installed NVIDIA driver..."
+    $SUDO mkdir -p /etc/cdi
+    if $SUDO nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml 2>/dev/null \
+       && [[ -s /etc/cdi/nvidia.yaml ]]; then
+      local lines; lines=$(wc -l < /etc/cdi/nvidia.yaml)
+      ok "CDI spec generated (${lines} lines)"
+      LIBCUDA_JUST_INSTALLED=1
+    else
+      warn "CDI spec generation failed."
+      warn "Manual fix: sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml"
+      return 1
+    fi
   else
-    warn "CDI spec generation failed."
-    warn "Manual fix: sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml"
-    warn "Then re-run: ./deploy.sh"
-    return 1
+    ok "CDI spec present ($(wc -l < /etc/cdi/nvidia.yaml) lines)"
+  fi
+
+  # Ensure libcuda.so.1 exists in the ldconfig path so 'runtime: nvidia' can inject it.
+  # After purging Debian's libcuda1, the symlink is gone. Read the actual path from the
+  # CDI spec (which points to the real DKMS driver binary) and recreate the symlink.
+  if ! ldconfig -p 2>/dev/null | grep -q "libcuda.so.1"; then
+    local libcuda_actual
+    libcuda_actual=$(grep -E "hostPath.*libcuda\.so\." /etc/cdi/nvidia.yaml 2>/dev/null \
+      | head -1 | sed 's/.*hostPath:[[:space:]]*//' | tr -d "'\"\r\n " )
+    if [[ -n "$libcuda_actual" && -f "$libcuda_actual" ]]; then
+      fixing "Recreating libcuda.so.1 symlink → $libcuda_actual"
+      $SUDO ln -sf "$libcuda_actual" /usr/lib/x86_64-linux-gnu/libcuda.so.1
+      $SUDO ldconfig
+      ok "libcuda.so.1 symlink created — runtime: nvidia can now inject CUDA"
+      LIBCUDA_JUST_INSTALLED=1
+    else
+      warn "libcuda.so.1 not in ldconfig and CDI spec path not found — GPU may run on CPU"
+      warn "Run: grep -i libcuda /etc/cdi/nvidia.yaml | head -5"
+    fi
+  else
+    ok "libcuda.so.1 registered in ldconfig"
   fi
 }
 
@@ -545,6 +560,11 @@ if [[ $LIBCUDA_JUST_INSTALLED -eq 1 ]]; then
   info "Waiting 15s for ollama to restart before starting dependents..."
   sleep 15
 fi
+
+# Always recreate ollama-init so it picks up the freshly rendered init-models.sh.
+# docker compose up -d won't recreate it just because the mounted file changed.
+fixing "Recreating ollama-init to pick up latest init-models.sh..."
+docker compose up -d --force-recreate ollama-init 2>/dev/null || true
 
 # --wait makes compose block until all health checks pass before returning,
 # which ensures dependent services (ollama-init, litellm) start in the right order.
