@@ -160,7 +160,7 @@ install_ollama_host() {
 # and store models on the large /data NVMe disk (2.9 TB).
 start_ollama_service() {
   local override_dir="/etc/systemd/system/ollama.service.d"
-  local models_dir="/data/ollama/models"
+  local models_dir="/data/ollama"
   # Fall back to home dir if /data doesn't have enough space
   local data_free_gb
   data_free_gb=$(df --output=avail /data 2>/dev/null | tail -1 | awk '{print int($1/1024/1024)}' || echo 0)
