@@ -45,11 +45,11 @@ services:
         max-size: "100m"
         max-file: "3"
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:11434/api/tags"]
-      interval: 30s
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 10
+      start_period: 30s
 
   # ── 1b. OLLAMA INIT ── one-shot: pulls models then exits ─────────────────
   # Generated from models.yaml — run ./deploy.sh render to regenerate

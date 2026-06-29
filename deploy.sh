@@ -20,7 +20,7 @@ info()  { echo -e "${CYAN}[--]${NC}   $1"; }
 fixing(){ echo -e "${YELLOW}[FIX]${NC}  $1"; }
 step()  { echo ""; echo -e "${BOLD}${CYAN}▶ $1${NC}"; }
 
-NO_GPU=0; DRY_RUN=0; AUTO_FIX=1
+NO_GPU=0; DRY_RUN=0; AUTO_FIX=1; LIBCUDA_JUST_INSTALLED=0
 
 # sudo helper — empty if already root
 SUDO=""
@@ -219,6 +219,7 @@ check_and_fix_cuda_libraries() {
       echo "$libcuda_dir" | $SUDO tee /etc/ld.so.conf.d/nvidia-cuda.conf >/dev/null
       $SUDO ldconfig
       ok "libcuda.so.1 registered in ldconfig"
+      LIBCUDA_JUST_INSTALLED=1
     fi
     return 0
   fi
@@ -272,6 +273,7 @@ check_and_fix_cuda_libraries() {
     $SUDO ldconfig
     if ldconfig -p 2>/dev/null | grep -q "libcuda.so.1"; then
       ok "libcuda.so.1 installed and registered"
+      LIBCUDA_JUST_INSTALLED=1
     else
       warn "Package installed but libcuda.so.1 still not in ldconfig — CUDA may still fail"
     fi
@@ -624,6 +626,16 @@ step "8/9  Starting services"
 info "Pulling Docker images..."
 retry 3 docker compose pull --quiet 2>/dev/null || \
   warn "Image pull had issues — continuing with locally cached images"
+
+# If libcuda was just installed this run, force-recreate GPU containers so the
+# nvidia-container-toolkit injects CUDA libraries into a fresh container.
+# (docker compose up -d won't recreate a running container unless config changed.)
+if [[ $LIBCUDA_JUST_INSTALLED -eq 1 ]]; then
+  fixing "libcuda installed this run — force-recreating ollama to pick up CUDA injection..."
+  docker compose up -d --force-recreate ollama 2>/dev/null || true
+  info "Waiting 15s for ollama to restart before starting dependents..."
+  sleep 15
+fi
 
 # --wait makes compose block until all health checks pass before returning,
 # which ensures dependent services (ollama-init, litellm) start in the right order.
