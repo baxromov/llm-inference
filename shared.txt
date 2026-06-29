@@ -1,1 +1,31 @@
-docker compose up -d --force-recreate ollama && sleep 20 && docker logs ollama 2>&1 | grep -E "library=|GPU|gpu" | head -5 && docker compose up -d && docker compose ps
+root@gpusrv02:/opt/llm-inference# git pull
+remote: Enumerating objects: 12, done.
+remote: Counting objects: 100% (12/12), done.
+remote: Compressing objects: 100% (5/5), done.
+remote: Total 8 (delta 4), reused 7 (delta 3), pack-reused 0 (from 0)
+Unpacking objects: 100% (8/8), 3.39 KiB | 1.70 MiB/s, done.
+From https://github.com/baxromov/llm-inference
+   c0f12a5..d837716  main       -> origin/main
+Updating c0f12a5..d837716
+Fast-forward
+ deploy.sh          | 14 +++++++++++++-
+ docker-compose.yml |  8 ++++----
+ shared.txt         |  4 +---
+ 3 files changed, 18 insertions(+), 8 deletions(-)
+root@gpusrv02:/opt/llm-inference# docker compose up -d --force-recreate ollama && sleep 20 && docker logs ollama 2>&1 | grep -E "library=|GPU|gpu" | head -5 && docker compose up -d && docker compose ps
+[+] up 1/1
+ ✔ Container ollama Started                                                                                                                                                                                 17.6s
+2026/06/29 04:06:03 routes.go:1231: INFO server config env="map[CUDA_VISIBLE_DEVICES:0,1 GPU_DEVICE_ORDINAL: HIP_VISIBLE_DEVICES: HSA_OVERRIDE_GFX_VERSION: HTTPS_PROXY: HTTP_PROXY: NO_PROXY: OLLAMA_CONTEXT_LENGTH:2048 OLLAMA_DEBUG:false OLLAMA_FLASH_ATTENTION:false OLLAMA_GPU_OVERHEAD:0 OLLAMA_HOST:http://0.0.0.0:11434 OLLAMA_INTEL_GPU:false OLLAMA_KEEP_ALIVE:24h0m0s OLLAMA_KV_CACHE_TYPE: OLLAMA_LLM_LIBRARY: OLLAMA_LOAD_TIMEOUT:5m0s OLLAMA_MAX_LOADED_MODELS:3 OLLAMA_MAX_QUEUE:512 OLLAMA_MODELS:/root/.ollama/models OLLAMA_MULTIUSER_CACHE:false OLLAMA_NEW_ENGINE:false OLLAMA_NOHISTORY:false OLLAMA_NOPRUNE:false OLLAMA_NUM_PARALLEL:4 OLLAMA_ORIGINS:[http://localhost https://localhost http://localhost:* https://localhost:* http://127.0.0.1 https://127.0.0.1 http://127.0.0.1:* https://127.0.0.1:* http://0.0.0.0 https://0.0.0.0 http://0.0.0.0:* https://0.0.0.0:* app://* file://* tauri://* vscode-webview://* vscode-file://*] OLLAMA_SCHED_SPREAD:true ROCR_VISIBLE_DEVICES: http_proxy: https_proxy: no_proxy:]"
+time=2026-06-29T04:06:03.290Z level=INFO source=gpu.go:217 msg="looking for compatible GPUs"
+time=2026-06-29T04:06:07.683Z level=INFO source=gpu.go:612 msg="Unable to load cudart library /usr/lib/x86_64-linux-gnu/nvidia/current/libcuda.so.550.163.01: cuda driver library init failure: 802"
+time=2026-06-29T04:06:16.494Z level=INFO source=gpu.go:377 msg="no compatible GPUs were discovered"
+time=2026-06-29T04:06:16.494Z level=INFO source=types.go:130 msg="inference compute" id=0 library=cpu variant="" compute="" driver=0.0 name="" total="503.6 GiB" available="494.2 GiB"
+[+] up 3/3
+ ✔ Container ollama      Healthy                                                                                                                                                                             0.5s
+ ✔ Container ollama-init Started                                                                                                                                                                             0.2s
+ ✔ Container litellm     Started                                                                                                                                                                             0.2s
+NAME          IMAGE                                 COMMAND                  SERVICE       CREATED          STATUS                                     PORTS
+litellm       ghcr.io/berriai/litellm:main-stable   "docker/prod_entrypo…"   litellm       32 minutes ago   Up Less than a second (health: starting)   4000/tcp, 0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp
+ollama        ollama/ollama:0.6.5                   "/bin/ollama serve"      ollama        39 seconds ago   Up 38 seconds (healthy)                    11434/tcp
+ollama-init   ollama/ollama:0.6.5                   "/bin/bash /init-mod…"   ollama-init   32 minutes ago   Up Less than a second                      11434/tcp
+root@gpusrv02:/opt/llm-inference#
