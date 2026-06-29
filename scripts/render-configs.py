@@ -83,7 +83,7 @@ def render_ollama_init(models: dict) -> None:
         'OLLAMA_HOST="${OLLAMA_HOST:-http://ollama:11434}"\n',
         "\n",
         'echo "==> Waiting for Ollama at ${OLLAMA_HOST}..."\n',
-        'until curl -sf "${OLLAMA_HOST}/api/tags" > /dev/null; do\n',
+        'until ollama list > /dev/null 2>&1; do\n',
         "  sleep 5\n",
         "done\n",
         "\n",
