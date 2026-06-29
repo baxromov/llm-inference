@@ -1,7 +1,241 @@
-echo "=== all libcuda files ===" && find / -maxdepth 8 -name "libcuda.so*" -not -path "*/proc/*" -not -path "*/sys/*" 2>/dev/null | sort
-echo "=== proc driver version ===" && cat /proc/driver/nvidia/version 2>/dev/null
-echo "=== removing mismatched Debian libcuda ===" && apt-get remove --purge -y libcuda1 libnvidia-pkcs11-openssl3 libnvidia-ptxjitcompiler1 libnvidia-cfg1 nvidia-persistenced 2>/dev/null | grep -E "Removing|Purging" && ldconfig
-echo "=== libcuda after removal ===" && find / -maxdepth 8 -name "libcuda.so*" -not -path "*/proc/*" -not -path "*/sys/*" 2>/dev/null | sort
-echo "=== generating CDI spec ===" && mkdir -p /etc/cdi && nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml 2>&1 | tail -5 && echo "CDI lines: $(wc -l < /etc/cdi/nvidia.yaml)"
-echo "=== test CUDA in container ===" && docker run --rm --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all -e NVIDIA_DRIVER_CAPABILITIES=all --entrypoint /bin/bash ollama/ollama:0.6.5 -c "ldconfig -p | grep libcuda; nvidia-smi 2>&1 | head -5" 2>&1
-echo "=== force-recreate ollama ===" && docker compose up -d --force-recreate ollama && sleep 25 && docker logs ollama 2>&1 | grep -E "library=|cuda.*error|GPU|Unable" | head -5
+litellm      | INFO:     172.20.0.1:47842 - "GET /ui/model_hub_table HTTP/1.1" 307 Temporary Redirect
+litellm      | INFO:     172.20.0.1:47842 - "GET /ui/model_hub_table/ HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47842 - "GET /litellm-asset-prefix/_next/static/chunks/01klzj5ksrl5k.js HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47854 - "GET /litellm-asset-prefix/_next/static/chunks/0ss.ii_pv92e~.js HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47842 - "GET /litellm-asset-prefix/_next/static/chunks/0m6zdocif1gl4.js HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47854 - "GET /litellm-asset-prefix/_next/static/chunks/0~xsvwrxynm3j.js HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47870 - "GET /litellm-asset-prefix/_next/static/chunks/0mc21v15f.-zo.js HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47874 - "GET /litellm-asset-prefix/_next/static/chunks/0ebita8gjvlk~.js HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47872 - "GET /litellm-asset-prefix/_next/static/chunks/17td6hcab744r.js HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47872 - "GET /litellm/.well-known/litellm-ui-config HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47872 - "GET /get/ui_settings HTTP/1.1" 500 Internal Server Error
+litellm      | INFO:     172.20.0.1:47874 - "GET /litellm/.well-known/litellm-ui-config HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47874 - "GET /public/model_hub HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47874 - "GET /public/litellm_blog_posts HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47872 - "GET /litellm/.well-known/litellm-ui-config HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47870 - "GET /get/ui_theme_settings HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47854 - "GET /litellm/.well-known/litellm-ui-config HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47874 - "HEAD / HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47874 - "GET /__next._tree.txt?_rsc=T9pR1PAuhkvsKvQr HTTP/1.1" 404 Not Found
+litellm      | INFO:     172.20.0.1:47870 - "GET /public/model_hub/info HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47854 - "GET /public/model_hub HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47872 - "GET /public/agent_hub HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47842 - "GET /public/mcp_hub HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47890 - "GET /public/skill_hub HTTP/1.1" 500 Internal Server Error
+litellm      | INFO:     172.20.0.1:47890 - "GET /get/ui_settings HTTP/1.1" 500 Internal Server Error
+litellm      | INFO:     172.20.0.1:47890 - "GET /get/ui_settings HTTP/1.1" 500 Internal Server Error
+litellm      | INFO:     172.20.0.1:47890 - "GET /get/ui_settings HTTP/1.1" 500 Internal Server Error
+litellm      | INFO:     172.20.0.1:47890 - "GET /index.txt?_rsc=vSoy26q6OO4DvnpF HTTP/1.1" 404 Not Found
+litellm      | INFO:     172.20.0.1:47890 - "GET / HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:47890 - "GET /openapi.json HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:39130 - "GET /fallback/login HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:39130 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+litellm      | INFO:     172.20.0.1:45076 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+litellm      | 04:09:45 - LiteLLM Proxy:ERROR: internal_user_endpoints.py:1463 - litellm.proxy.proxy_server.user_update(): Exception occured - Not connected to DB!
+litellm      | Traceback (most recent call last):
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/internal_user_endpoints.py", line 1457, in user_update
+litellm      |     response = await _update_single_user_helper(
+litellm      |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+litellm      |     ...<2 lines>...
+litellm      |     )
+litellm      |     ^
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/internal_user_endpoints.py", line 1256, in _update_single_user_helper
+litellm      |     raise Exception("Not connected to DB!")
+litellm      | Exception: Not connected to DB!
+litellm      | 04:09:45 - LiteLLM Proxy:ERROR: proxy_server.py:13840 - litellm.proxy.proxy_server.login_v2(): Exception occurred - Authentication Error, Not connected to DB!
+litellm      | Traceback (most recent call last):
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/internal_user_endpoints.py", line 1457, in user_update
+litellm      |     response = await _update_single_user_helper(
+litellm      |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+litellm      |     ...<2 lines>...
+litellm      |     )
+litellm      |     ^
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/internal_user_endpoints.py", line 1256, in _update_single_user_helper
+litellm      |     raise Exception("Not connected to DB!")
+litellm      | Exception: Not connected to DB!
+litellm      |
+litellm      | During handling of the above exception, another exception occurred:
+litellm      |
+litellm      | Traceback (most recent call last):
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/proxy_server.py", line 13802, in login_v2
+litellm      |     login_result = await authenticate_user(
+litellm      |                    ^^^^^^^^^^^^^^^^^^^^^^^^
+litellm      |     ...<4 lines>...
+litellm      |     )
+litellm      |     ^
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/auth/login_utils.py", line 184, in authenticate_user
+litellm      |     await user_update(
+litellm      |     ...<7 lines>...
+litellm      |     )
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/management_helpers/utils.py", line 652, in wrapper
+litellm      |     raise e
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/management_helpers/utils.py", line 593, in wrapper
+litellm      |     result = await func(*args, **kwargs)
+litellm      |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/internal_user_endpoints.py", line 1478, in user_update
+litellm      |     raise ProxyException(
+litellm      |     ...<4 lines>...
+litellm      |     )
+litellm      | litellm.proxy._types.ProxyException: Authentication Error, Not connected to DB!
+litellm      | INFO:     172.20.0.1:45076 - "POST /v2/login HTTP/1.1" 400 Bad Request
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:19:07 | 200 |      46.858µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:19:07 | 200 |      94.466µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:19:18 | 200 |      51.837µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:19:18 | 200 |     123.701µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:19:28 | 200 |      43.521µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:19:28 | 200 |     103.994µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:19:38 | 200 |      49.102µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:19:38 | 200 |      80.841µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:19:48 | 200 |      18.355µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:19:48 | 200 |      77.435µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:19:58 | 200 |      13.204µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:19:58 | 200 |     125.825µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:20:08 | 200 |      50.154µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:20:08 | 200 |      79.108µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:20:18 | 200 |      43.041µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:20:18 | 200 |      78.527µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:20:28 | 200 |      37.821µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:20:28 | 200 |      92.573µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:20:38 | 200 |      40.726µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:20:38 | 200 |      86.642µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:20:48 | 200 |      117.57µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:20:48 | 200 |       74.97µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:20:58 | 200 |      64.862µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:20:58 | 200 |     166.441µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:21:08 | 200 |      43.382µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:21:08 | 200 |     109.876µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+
+root@gpusrv02:/opt/llm-inference# ./deploy.sh
+
+╔══════════════════════════════════════════════════════╗
+║    LLM Inference Stack — Self-Healing Deploy        ║
+╚══════════════════════════════════════════════════════╝
+[--]   Mode: Auto-fix ON
+
+▶ 1/9  Docker
+[OK]   Docker 29.6.0 — daemon running
+
+▶ 2/9  Python dependencies
+[OK]   Python 3.13.5 + PyYAML ready
+
+▶ 3/9  GPU & nvidia runtime
+[OK]   Found 2 GPU(s):
+       0, NVIDIA A100-SXM4-80GB, 81920 MiB, 550.163.01
+       1, NVIDIA A100-SXM4-80GB, 81920 MiB, 550.163.01
+[OK]   nvidia-container-toolkit 1.19.1
+[OK]   nvidia runtime registered in Docker
+[OK]   nvidia runtime confirmed in Docker
+[FIX]  Generating CDI spec from installed NVIDIA driver...
+[FIX]  Removing Debian libcuda1 to prevent driver mismatch (error 802)...
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following packages will be REMOVED:
+  libcuda1* libnvidia-cfg1* libnvidia-pkcs11-openssl3* libnvidia-ptxjitcompiler1* nvidia-persistenced*
+0 upgraded, 0 newly installed, 5 to remove and 45 not upgraded.
+After this operation, 58.7 MB disk space will be freed.
+(Reading database ... 103884 files and directories currently installed.)
+Removing libcuda1:amd64 (550.163.01-2) ...
+Removing nvidia-persistenced (550.163.01-1) ...
+Removing libnvidia-cfg1:amd64 (550.163.01-2) ...
+Removing libnvidia-pkcs11-openssl3:amd64 (550.163.01-2) ...
+Removing libnvidia-ptxjitcompiler1:amd64 (550.163.01-2) ...
+Processing triggers for libc-bin (2.41-12+deb13u3) ...
+Processing triggers for man-db (2.13.1-1) ...
+Processing triggers for nvidia-alternative (550.163.01-2) ...
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/nvidia/current because link group nvidia is broken
+(Reading database ... 103837 files and directories currently installed.)
+Purging configuration files for nvidia-persistenced (550.163.01-1) ...
+Processing triggers for glx-alternative-nvidia (1.2.2) ...
+Processing triggers for glx-alternative-mesa (1.2.2) ...
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/nvidia because link group glx is broken
+update-alternatives: warning: skip creation of /usr/lib/x86_64-linux-gnu/libnvidia-cfg.so.1 because associated file /usr/lib/x86_64-linux-gnu/nvidia/libnvidia-cfg.so.1 (of link group glx) doesn't exist
+Processing triggers for update-glx (1.2.2) ...
+Processing triggers for libc-bin (2.41-12+deb13u3) ...
+Processing triggers for glx-alternative-nvidia (1.2.2) ...
+Processing triggers for libc-bin (2.41-12+deb13u3) ...
+Processing triggers for initramfs-tools (0.148.4) ...
+update-initramfs: Generating /boot/initrd.img-7.0.6-2-pve
+Running hook script 'zz-proxmox-boot'..
+Re-executing '/etc/kernel/postinst.d/zz-proxmox-boot' in new private mount namespace..
+No /etc/kernel/proxmox-boot-uuids found, skipping ESP sync.
+[OK]   CDI spec generated (372 lines) — GPU libraries mapped from actual driver
+
+▶ 4/9  Disk space
+[OK]   Disk: 2758 GB free on /data/docker
+
+▶ 5/9  Environment (.env)
+[OK]   .env configured
+
+▶ 6/9  Rendering configs from models.yaml
+Rendering configs from models.yaml ...
+  [OK] litellm/config.yaml
+  [OK] ollama/init-models.sh
+
+Done. Apply changes with:
+  docker compose restart litellm     # after model changes
+  docker compose restart ollama-init # to pull new Ollama models
+[OK]   Configs rendered (litellm/config.yaml + ollama/init-models.sh)
+
+▶ 7/9  Validating docker-compose.yml
+[OK]   docker-compose.yml is valid
+
+▶ 8/9  Starting services
+[--]   Pulling Docker images...
+[FIX]  libcuda installed this run — force-recreating ollama to pick up CUDA injection...
+[--]   Waiting 15s for ollama to restart before starting dependents...
+[+] up 1/3
+ ✔ Container ollama      Healthy                                                                                                                                                                             1.0s
+ ⠦ Container ollama-init Waiting                                                                                                                                                                             1.0s
+ ⠦ Container litellm     Waiting                                                                                                                                                                             1.0s
+container litellm is unhealthy
+[+] up 3/3
+ ✔ Container litellm     Running                                                                                                                                                                             0.0s
+ ✔ Container ollama      Healthy                                                                                                                                                                             0.5s
+ ✔ Container ollama-init Running                                                                                                                                                                             0.0s
+[OK]   Containers started
+
+▶ 9/9  Health check & auto-fix
+
+[--]   Waiting for services to become healthy (timeout: 300s)
+[--]     [0s] waiting on: litellm
+[--]     [10s] waiting on: litellm
+[--]     [20s] waiting on: litellm
+[--]     [30s] waiting on: litellm
+[--]     [40s] waiting on: litellm
+[--]     [50s] waiting on: litellm
+[--]     [60s] waiting on: litellm
+[--]     [70s] waiting on: litellm
+[--]     [80s] waiting on: litellm
+[--]     [90s] waiting on: litellm
+[--]     [100s] waiting on: litellm
+[--]     [110s] waiting on: litellm
+[--]     [120s] waiting on: litellm
+[--]     [130s] waiting on: litellm
