@@ -108,6 +108,22 @@ configure_service() {
 
   $SUDO mkdir -p "${OVERRIDE_DIR}" "${MODELS_DIR}"
 
+  # Migrate models from the old default location (/root/.ollama/models) if they
+  # exist and the new OLLAMA_MODELS dir is empty.
+  # Ollama stores blobs+manifests directly under $OLLAMA_MODELS, so:
+  #   old: /root/.ollama/models/blobs/   /root/.ollama/models/manifests/
+  #   new: /data/ollama/blobs/           /data/ollama/manifests/
+  OLD_MODELS="/root/.ollama/models"
+  if [[ -d "${OLD_MODELS}/blobs" ]] && [[ "$(ls -A "${OLD_MODELS}/blobs" 2>/dev/null)" != "" ]]; then
+    if [[ ! -d "${MODELS_DIR}/blobs" ]] || [[ "$(ls -A "${MODELS_DIR}/blobs" 2>/dev/null)" == "" ]]; then
+      fix "Migrating models: ${OLD_MODELS} → ${MODELS_DIR} ..."
+      $SUDO cp -a "${OLD_MODELS}/." "${MODELS_DIR}/"
+      ok "Models migrated to ${MODELS_DIR}"
+    else
+      info "Models already present in ${MODELS_DIR} — skipping migration"
+    fi
+  fi
+
   fix "Writing ${OVERRIDE_DIR}/override.conf ..."
   $SUDO tee "${OVERRIDE_DIR}/override.conf" > /dev/null << SVCEOF
 [Service]
@@ -202,8 +218,8 @@ show_models() {
       warn "Check VRAM usage below and consider unloading other models."
     else
       # Only show success if at least one model is loaded
-      LOADED_COUNT=$(echo "$RUNNING" | tail -n +2 | grep -c . || echo 0)
-      if [[ "$LOADED_COUNT" -gt 0 ]]; then
+      LOADED_COUNT=$(echo "$RUNNING" | tail -n +2 | grep -v '^[[:space:]]*$' | wc -l | tr -d ' ')
+      if [[ "${LOADED_COUNT:-0}" -gt 0 ]]; then
         ok "All loaded models are running 100% on GPU"
       else
         info "No models currently loaded (will load on first request)."
