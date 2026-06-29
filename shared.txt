@@ -1,6 +1,99 @@
-Every 1.0s: nvidia-smi                                        gpusrv02.local: Mon Jun 29 13:10:20 2026
+root@gpusrv02:/opt/llm-inference# ./scripts/setup-ollama.sh test-gpu
 
-Mon Jun 29 13:10:20 2026
+▶ GPU load test
+[--]   Loading model 'gpt-oss:latest' for GPU test (keepalive=30s)...
+[--]   Waiting for model to load into VRAM...
+
+NAME              ID              SIZE     PROCESSOR    CONTEXT    UNTIL
+gpt-oss:latest    17052f91a42e    14 GB    100% CPU     4096       28 seconds from now
+
+[!!]   Model loaded but running on CPU — CUDA runner issue.
+[!!]   Fix steps:
+[!!]     1. sudo journalctl -u ollama -n 50 | grep -iE 'cuda|gpu|error'
+[!!]     2. curl -fsSL https://ollama.com/install.sh | sudo sh   (reinstall for CUDA runners)
+[!!]     3. sudo systemctl restart ollama && ./scripts/setup-ollama.sh test-gpu
+root@gpusrv02:/opt/llm-inference# sudo journalctl -u ollama -n 50 | grep -iE 'cuda|gpu|error'
+Jun 29 13:10:11 gpusrv02.local ollama[52221]: slot launch_slot_: id  3 | task -1 | sampler chain: logits -> penalties -> ?dry -> ?top-n-sigma -> top-k -> ?typical -> top-p -> ?min-p -> ?xtc -> ?temp-ext -> dist
+Jun 29 13:10:11 gpusrv02.local ollama[52221]: slot launch_slot_: id  3 | task -1 | sampler params:
+Jun 29 13:10:11 gpusrv02.local ollama[52221]:         repeat_last_n = 64, repeat_penalty = 1.100, frequency_penalty = 0.000, presence_penalty = 0.000
+Jun 29 13:10:11 gpusrv02.local ollama[52221]:         dry_multiplier = 0.000, dry_base = 1.750, dry_allowed_length = 2, dry_penalty_last_n = 4096
+Jun 29 13:10:11 gpusrv02.local ollama[52221]:         top_k = 40, top_p = 0.900, min_p = 0.000, xtc_probability = 0.000, xtc_threshold = 0.100, typical_p = 1.000, top_n_sigma = -1.000, temp = 1.000
+Jun 29 13:10:11 gpusrv02.local ollama[52221]:         mirostat = 0, mirostat_lr = 0.100, mirostat_ent = 5.000, adaptive_target = -1.000, adaptive_decay = 0.900
+Jun 29 13:10:11 gpusrv02.local ollama[52221]: slot launch_slot_: id  3 | task 45 | processing task, is_child = 0
+Jun 29 13:10:11 gpusrv02.local ollama[52221]: slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+Jun 29 13:10:11 gpusrv02.local ollama[52221]: slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+Jun 29 13:10:11 gpusrv02.local ollama[52221]: slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+Jun 29 13:10:11 gpusrv02.local ollama[52221]: slot   operator(): id  3 | task 45 | new prompt, n_ctx_slot = 4096, n_keep = 4, task.n_tokens = 93
+Jun 29 13:10:11 gpusrv02.local ollama[52221]: slot   operator(): id  3 | task 45 | Checking checkpoint with [0, 63] against 0...
+Jun 29 13:10:11 gpusrv02.local ollama[52221]: slot   operator(): id  3 | task 45 | restored context checkpoint (pos_min = 0, pos_max = 63, n_tokens = 64, n_past = 63, size = 1.501 MiB)
+Jun 29 13:10:11 gpusrv02.local ollama[52221]: slot   operator(): id  3 | task 45 | cached n_tokens = 63, memory_seq_rm [63, end)
+Jun 29 13:10:12 gpusrv02.local ollama[52221]: slot   operator(): id  3 | task 45 | cached n_tokens = 89, memory_seq_rm [89, end)
+Jun 29 13:10:12 gpusrv02.local ollama[52221]: slot init_sampler: id  3 | task 45 | init sampler, took 0.03 ms, tokens: text = 93, total = 93
+Jun 29 13:10:17 gpusrv02.local ollama[52221]: [GIN] 2026/06/29 - 13:10:17 | 200 |  5.871168213s |       127.0.0.1 | POST     "/api/chat"
+Jun 29 13:10:17 gpusrv02.local ollama[52221]: srv          stop: cancel task, id_task = 45
+Jun 29 13:10:17 gpusrv02.local ollama[52221]: slot      release: id  3 | task 45 | stop processing: n_tokens = 112, truncated = 0
+Jun 29 13:10:17 gpusrv02.local ollama[52221]: srv  update_slots: all slots are idle
+Jun 29 13:21:31 gpusrv02.local ollama[52221]: [GIN] 2026/06/29 - 13:21:31 | 200 |      38.542µs |       127.0.0.1 | HEAD     "/"
+Jun 29 13:21:31 gpusrv02.local ollama[52221]: [GIN] 2026/06/29 - 13:21:31 | 200 |     284.622µs |       127.0.0.1 | GET      "/api/tags"
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 1.000 (> 0.100 thold), f_keep = 0.607
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot launch_slot_: id  3 | task -1 | sampler chain: logits -> penalties -> ?dry -> ?top-n-sigma -> top-k -> ?typical -> top-p -> ?min-p -> ?xtc -> ?temp-ext -> dist
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot launch_slot_: id  3 | task -1 | sampler params:
+Jun 29 13:21:32 gpusrv02.local ollama[52221]:         repeat_last_n = 64, repeat_penalty = 1.100, frequency_penalty = 0.000, presence_penalty = 0.000
+Jun 29 13:21:32 gpusrv02.local ollama[52221]:         dry_multiplier = 0.000, dry_base = 1.750, dry_allowed_length = 2, dry_penalty_last_n = 4096
+Jun 29 13:21:32 gpusrv02.local ollama[52221]:         top_k = 40, top_p = 0.900, min_p = 0.000, xtc_probability = 0.000, xtc_threshold = 0.100, typical_p = 1.000, top_n_sigma = -1.000, temp = 1.000
+Jun 29 13:21:32 gpusrv02.local ollama[52221]:         mirostat = 0, mirostat_lr = 0.100, mirostat_ent = 5.000, adaptive_target = -1.000, adaptive_decay = 0.900
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot launch_slot_: id  3 | task 68 | processing task, is_child = 0
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot   operator(): id  3 | task 68 | new prompt, n_ctx_slot = 4096, n_keep = 4, task.n_tokens = 68
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot   operator(): id  3 | task 68 | Checking checkpoint with [0, 63] against 0...
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot   operator(): id  3 | task 68 | restored context checkpoint (pos_min = 0, pos_max = 63, n_tokens = 64, n_past = 63, size = 1.501 MiB)
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot   operator(): id  3 | task 68 | cached n_tokens = 63, memory_seq_rm [63, end)
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot   operator(): id  3 | task 68 | cached n_tokens = 64, memory_seq_rm [64, end)
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot init_sampler: id  3 | task 68 | init sampler, took 0.03 ms, tokens: text = 68, total = 68
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot print_timing: id  3 | task 68 | prompt eval time =     242.29 ms /     5 tokens (   48.46 ms per token,    20.64 tokens per second)
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot print_timing: id  3 | task 68 |        eval time =       0.00 ms /     1 tokens (    0.00 ms per token, 1000000.00 tokens per second)
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot print_timing: id  3 | task 68 |       total time =     242.29 ms /     6 tokens
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot print_timing: id  3 | task 68 |    graphs reused =         60
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: slot      release: id  3 | task 68 | stop processing: n_tokens = 68, truncated = 0
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: srv  update_slots: all slots are idle
+Jun 29 13:21:32 gpusrv02.local ollama[52221]: [GIN] 2026/06/29 - 13:21:32 | 200 |  1.002816978s |             ::1 | POST     "/api/generate"
+Jun 29 13:21:33 gpusrv02.local ollama[52221]: [GIN] 2026/06/29 - 13:21:33 | 200 |      36.228µs |       127.0.0.1 | HEAD     "/"
+Jun 29 13:21:33 gpusrv02.local ollama[52221]: [GIN] 2026/06/29 - 13:21:33 | 200 |      53.611µs |       127.0.0.1 | GET      "/api/ps"
+Jun 29 13:21:33 gpusrv02.local ollama[52221]: [GIN] 2026/06/29 - 13:21:33 | 200 |      11.452µs |       127.0.0.1 | HEAD     "/"
+Jun 29 13:21:33 gpusrv02.local ollama[52221]: [GIN] 2026/06/29 - 13:21:33 | 200 |      27.201µs |       127.0.0.1 | GET      "/api/ps"
+root@gpusrv02:/opt/llm-inference# curl -fsSL https://ollama.com/install.sh | sudo sh
+>>> Cleaning up old version at /usr/local/lib/ollama
+>>> Installing ollama to /usr/local
+>>> Downloading ollama-linux-amd64.tar.zst
+######################################################################## 100.0%
+>>> Adding ollama user to render group...
+>>> Adding ollama user to video group...
+>>> Adding current user to ollama group...
+>>> Creating ollama systemd service...
+>>> Enabling and starting ollama service...
+>>> NVIDIA GPU installed.
+root@gpusrv02:/opt/llm-inference# sudo systemctl restart ollama && ./scripts/setup-ollama.sh test-gpu
+
+▶ GPU load test
+[!!]   No models found. Pull a model first: ollama pull llama3.2:latest
+root@gpusrv02:/opt/llm-inference# ./scripts/setup-ollama.sh test-gpu
+
+▶ GPU load test
+[--]   Loading model 'gpt-oss:latest' for GPU test (keepalive=30s)...
+[--]   Waiting for model to load into VRAM...
+
+NAME              ID              SIZE     PROCESSOR    CONTEXT    UNTIL
+gpt-oss:latest    17052f91a42e    14 GB    100% CPU     4096       29 seconds from now
+
+[!!]   Model loaded but running on CPU — CUDA runner issue.
+[!!]   Fix steps:
+[!!]     1. sudo journalctl -u ollama -n 50 | grep -iE 'cuda|gpu|error'
+[!!]     2. curl -fsSL https://ollama.com/install.sh | sudo sh   (reinstall for CUDA runners)
+[!!]     3. sudo systemctl restart ollama && ./scripts/setup-ollama.sh test-gpu
+root@gpusrv02:/opt/llm-inference# nvidia-smi
+Mon Jun 29 13:24:54 2026
 +-----------------------------------------------------------------------------------------+
 | NVIDIA-SMI 550.163.01             Driver Version: 550.163.01     CUDA Version: 12.4     |
 |-----------------------------------------+------------------------+----------------------+
@@ -9,11 +102,11 @@ Mon Jun 29 13:10:20 2026
 |                                         |                        |               MIG M. |
 |=========================================+========================+======================|
 |   0  NVIDIA A100-SXM4-80GB          On  |   00000000:0B:00.0 Off |                    0 |
-| N/A   33C    P0             79W /  400W |       1MiB /  81920MiB |      0%      Default |
+| N/A   29C    P0             55W /  400W |       1MiB /  81920MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
 |   1  NVIDIA A100-SXM4-80GB          On  |   00000000:48:00.0 Off |                    0 |
-| N/A   34C    P0             80W /  400W |       1MiB /  81920MiB |      0%      Default |
+| N/A   30C    P0             56W /  400W |       1MiB /  81920MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
 
@@ -24,3 +117,4 @@ Mon Jun 29 13:10:20 2026
 |=========================================================================================|
 |  No running processes found                                                             |
 +-----------------------------------------------------------------------------------------+
+root@gpusrv02:/opt/llm-inference#
