@@ -148,9 +148,20 @@ configure_nvidia_runtime() {
 # libcuda1-<version> and cuda-drivers packages.
 add_cuda_apt_repo() {
   local arch; arch=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
-  # Map Ubuntu codename → CUDA repo path segment (nvidia uses no hyphens)
+  local os_id; os_id=$(. /etc/os-release 2>/dev/null && echo "${ID:-ubuntu}")
   local codename; codename=$(. /etc/os-release 2>/dev/null && echo "${VERSION_CODENAME:-jammy}")
-  local repo_id="${codename//-/}"  # e.g. jammy, focal, noble
+
+  # Map distro+codename → NVIDIA CUDA repo identifier.
+  # Debian Trixie (13/testing) and Sid have no dedicated repo — use debian12.
+  local repo_id
+  case "${os_id}:${codename}" in
+    ubuntu:noble)            repo_id="ubuntu2404" ;;
+    ubuntu:jammy)            repo_id="ubuntu2204" ;;
+    ubuntu:focal)            repo_id="ubuntu2004" ;;
+    debian:bookworm)         repo_id="debian12"   ;;
+    debian:trixie|debian:sid|debian:*) repo_id="debian12" ;;
+    *)                       repo_id="ubuntu2204" ;;  # safe fallback
+  esac
 
   if dpkg -l cuda-keyring 2>/dev/null | grep -q "^ii"; then
     return 0  # already added
@@ -161,7 +172,7 @@ add_cuda_apt_repo() {
   if wget -q -O /tmp/cuda-keyring.deb "$keyring_url" 2>/dev/null \
      && $SUDO dpkg -i /tmp/cuda-keyring.deb 2>/dev/null; then
     rm -f /tmp/cuda-keyring.deb
-    ok "CUDA apt repo added"
+    ok "CUDA apt repo added (${repo_id})"
   else
     rm -f /tmp/cuda-keyring.deb
     warn "Could not add CUDA apt repo (URL: ${keyring_url})"
@@ -229,21 +240,33 @@ check_and_fix_cuda_libraries() {
   if [[ "$PKG_MGR" == "apt" ]]; then
     # Fix any expired GPG keys before running apt-get update
     fix_nvidia_container_toolkit_key
-
-    # Ensure CUDA apt repo is present (provides libcuda1-<ver> and cuda-drivers)
-    add_cuda_apt_repo
-
     $SUDO apt-get update -qq 2>/dev/null || true
 
-    # Try specific version first, fall back to generic
+    # Pass 1: try from already-configured repos (Debian non-free often has libcuda1)
+    if $SUDO apt-get install -y -qq "libcuda1" 2>/dev/null \
+       || $SUDO apt-get install -y -qq "libcuda1-${driver_major}" 2>/dev/null; then
+      $SUDO ldconfig
+      if ldconfig -p 2>/dev/null | grep -q "libcuda.so.1"; then
+        ok "libcuda.so.1 installed from existing repos"
+        return 0
+      fi
+    fi
+
+    # Pass 2: add NVIDIA CUDA apt repo and retry
+    add_cuda_apt_repo
+    $SUDO apt-get update -qq 2>/dev/null || true
+
     $SUDO apt-get install -y -qq "libcuda1-${driver_major}" 2>/dev/null \
+    || $SUDO apt-get install -y -qq "libcuda1" 2>/dev/null \
     || $SUDO apt-get install -y -qq "cuda-drivers-${driver_major}" 2>/dev/null \
     || $SUDO apt-get install -y -qq cuda-drivers 2>/dev/null \
     || {
-      warn "Auto-install failed. Manual fix:"
-      warn "  wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb"
-      warn "  sudo dpkg -i cuda-keyring_1.1-1_all.deb && sudo apt-get update"
-      warn "  sudo apt-get install -y libcuda1-${driver_major}"
+      warn "Auto-install failed. Manual steps to fix on this server:"
+      warn "  arch=\$(dpkg --print-architecture)"
+      warn "  wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/\${arch}/cuda-keyring_1.1-1_all.deb"
+      warn "  sudo dpkg -i cuda-keyring_1.1-1_all.deb"
+      warn "  sudo apt-get update && sudo apt-get install -y libcuda1-${driver_major}"
+      warn "  Then re-run ./deploy.sh"
       return 1
     }
     $SUDO ldconfig
