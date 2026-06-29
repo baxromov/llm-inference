@@ -1,83 +1,29 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# LLM Inference Stack — Ollama + LiteLLM
+# LLM Inference Stack — LiteLLM proxy (Ollama runs natively on the host)
+#
+# Architecture:
+#   Ollama  → systemd service on host  (direct GPU, no container injection)
+#   LiteLLM → Docker container         (connects to host Ollama via host.docker.internal)
 #
 # Host requirements:
-#   - Docker 24+  |  nvidia-container-toolkit >= 1.14  |  CUDA 12.x driver
-#   - nvidia-smi must show GPU(s)
+#   - Ollama installed + running  (./deploy.sh handles this automatically)
+#   - NVIDIA driver + nvidia-smi  (for GPU access)
 #
 # Exposed ports:
-#   4000  → LiteLLM API  +  /ui dashboard
+#   8080  → LiteLLM API  +  /ui dashboard
 #
 # Run:  ./deploy.sh
 # ─────────────────────────────────────────────────────────────────────────────
 
-networks:
-  llm-net:
-    driver: bridge
-
-volumes:
-  ollama_data:
-
 services:
-  # ── 1. OLLAMA ── LLM runner ───────────────────────────────────────────────
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
-    restart: unless-stopped
-    runtime: nvidia
-    networks:
-      - llm-net
-    volumes:
-      - ollama_data:/root/.ollama
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - OLLAMA_HOST=0.0.0.0:11434
-      - OLLAMA_KEEP_ALIVE=24h
-      - OLLAMA_NUM_PARALLEL=4
-      - OLLAMA_MAX_LOADED_MODELS=3
-      - OLLAMA_SCHED_SPREAD=1
-      - CUDA_VISIBLE_DEVICES=0,1
-    logging:
-      driver: json-file
-      options:
-        max-size: "100m"
-        max-file: "3"
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 10s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
-
-  # ── 1b. OLLAMA INIT ── one-shot: pulls models then exits ─────────────────
-  # Generated from models.yaml — run ./deploy.sh render to regenerate
-  ollama-init:
-    image: ollama/ollama:latest
-    container_name: ollama-init
-    restart: on-failure:3
-    networks:
-      - llm-net
-    depends_on:
-      ollama:
-        condition: service_healthy
-    volumes:
-      - ollama_data:/root/.ollama
-      - ./ollama/init-models.sh:/init-models.sh:ro
-    environment:
-      - OLLAMA_HOST=http://ollama:11434
-    entrypoint: ["/bin/bash", "/init-models.sh"]
-
-  # ── 2. LITELLM PROXY ── OpenAI-compatible API gateway + built-in UI ──────
+  # ── LITELLM PROXY ── OpenAI-compatible API gateway + built-in UI ──────────
   # config.yaml is auto-generated from models.yaml — run ./deploy.sh render
   litellm:
     image: ghcr.io/berriai/litellm:main-stable
     container_name: litellm
     restart: unless-stopped
-    networks:
-      - llm-net
-    depends_on:
-      ollama:
-        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./litellm/config.yaml:/app/config.yaml:ro
     environment:
@@ -86,8 +32,7 @@ services:
       - UI_USERNAME=${LITELLM_UI_USERNAME}
       - UI_PASSWORD=${LITELLM_UI_PASSWORD}
       - LITELLM_TELEMETRY=false
-    command:
-      ["--config", "/app/config.yaml", "--port", "8080", "--num_workers", "1"]
+    command: ["--config", "/app/config.yaml", "--port", "8080", "--num_workers", "1"]
     ports:
       - "8080:8080"
     logging:

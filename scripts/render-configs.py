@@ -54,7 +54,7 @@ def render_litellm_config(models: dict) -> None:
             lines.append(f"  - model_name: {m['name']}\n")
             lines.append(f"    litellm_params:\n")
             lines.append(f"      model: ollama_chat/{ollama_model}\n")
-            lines.append(f"      api_base: http://ollama:11434\n")
+            lines.append(f"      api_base: http://host.docker.internal:11434\n")
             lines.append(f"      stream_timeout: {stream_timeout}\n")
             lines.append(f"      timeout: {timeout}\n")
 
@@ -62,7 +62,7 @@ def render_litellm_config(models: dict) -> None:
                 lines.append(f"\n  - model_name: {alias}\n")
                 lines.append(f"    litellm_params:\n")
                 lines.append(f"      model: ollama_chat/{ollama_model}\n")
-                lines.append(f"      api_base: http://ollama:11434\n")
+                lines.append(f"      api_base: http://host.docker.internal:11434\n")
 
     lines.append("\n")
     with open(template_path) as f:

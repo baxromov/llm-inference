@@ -143,49 +143,53 @@ configure_nvidia_runtime() {
   ok "nvidia runtime configured and Docker restarted"
 }
 
-# Ensure GPU compute works in containers using CDI (Container Device Interface).
-#
-# WHY CDI instead of Debian's libcuda1 package:
-#   Installing libcuda1 from Debian repos can produce CUDA_ERROR_SYSTEM_DRIVER_MISMATCH
-#   (error 802) when the Debian-packaged library doesn't exactly match the kernel
-#   module installed via Proxmox/DKMS/.run — even if version strings look identical.
-#   CDI reads directly from the actual driver files on disk, bypassing ldconfig
-#   and Debian package management entirely, so it always finds the correct library.
-check_and_fix_cuda_libraries() {
-  # 'runtime: nvidia' needs libcuda.so.1 registered in ldconfig on the HOST so the
-  # nvidia-container-cli can inject it into containers. Without it, nvidia-smi works
-  # (device nodes present) but CUDA is N/A and ollama falls back to CPU.
-  if ldconfig -p 2>/dev/null | grep -q "libcuda.so.1"; then
-    ok "libcuda.so.1 registered in ldconfig"
+# Install Ollama as a native binary on the host for direct GPU access.
+# Running on the host avoids all container GPU injection complexity (libcuda, CDI, etc.)
+install_ollama_host() {
+  if command -v ollama >/dev/null 2>&1; then
+    ok "Ollama $(ollama --version 2>/dev/null | grep -oP '\d+\.\d+\.\d+' | head -1 || echo 'found') already installed on host"
     return 0
   fi
+  fixing "Installing Ollama on host (native binary — direct GPU access, no container hassle)..."
+  curl -fsSL https://ollama.com/install.sh | $SUDO sh
+  command -v ollama >/dev/null 2>&1 || fatal "Ollama install failed — binary not found after install"
+  ok "Ollama installed on host"
+}
 
-  # libcuda.so.1 missing — install it
-  if [[ "$PKG_MGR" == "apt" ]]; then
-    fixing "Installing libcuda1 (CUDA driver bridge for container injection)..."
-    $SUDO apt-get install -y -q libcuda1 2>/dev/null || true
-    $SUDO ldconfig
-    if ldconfig -p 2>/dev/null | grep -q "libcuda.so.1"; then
-      ok "libcuda.so.1 installed via libcuda1"
-      LIBCUDA_JUST_INSTALLED=1
-      return 0
-    fi
-  fi
+# Configure Ollama systemd service: listen on all interfaces so LiteLLM Docker can reach it,
+# and store models on the large /data NVMe disk (2.9 TB).
+start_ollama_service() {
+  local override_dir="/etc/systemd/system/ollama.service.d"
+  local models_dir="/data/ollama/models"
+  # Fall back to home dir if /data doesn't have enough space
+  local data_free_gb
+  data_free_gb=$(df --output=avail /data 2>/dev/null | tail -1 | awk '{print int($1/1024/1024)}' || echo 0)
+  [[ "$data_free_gb" -lt 100 ]] && models_dir="/root/.ollama/models"
 
-  # Fallback: search for any versioned libcuda.so on disk and symlink it
-  local libcuda_path
-  libcuda_path=$(find /usr/lib/x86_64-linux-gnu /usr/local/lib -maxdepth 5 \
-    -name "libcuda.so.*.*" 2>/dev/null | sort -V | tail -1)
-  if [[ -n "$libcuda_path" && -f "$libcuda_path" ]]; then
-    fixing "Symlinking libcuda.so.1 → $libcuda_path"
-    $SUDO ln -sf "$libcuda_path" /usr/lib/x86_64-linux-gnu/libcuda.so.1
-    $SUDO ldconfig
-    ok "libcuda.so.1 symlinked — CUDA injection should work"
-    LIBCUDA_JUST_INSTALLED=1
-  else
-    warn "libcuda.so.1 not found — ollama will run on CPU"
-    warn "Fix: apt-get install libcuda1  then  ./deploy.sh"
-  fi
+  fixing "Configuring Ollama service (0.0.0.0:11434, models → ${models_dir})..."
+  $SUDO mkdir -p "$override_dir" "$models_dir"
+  $SUDO tee "${override_dir}/override.conf" > /dev/null << SVCEOF
+[Service]
+Environment="OLLAMA_HOST=0.0.0.0:11434"
+Environment="OLLAMA_MODELS=${models_dir}"
+Environment="OLLAMA_KEEP_ALIVE=24h"
+Environment="OLLAMA_NUM_PARALLEL=4"
+Environment="OLLAMA_MAX_LOADED_MODELS=3"
+Environment="OLLAMA_SCHED_SPREAD=1"
+SVCEOF
+
+  $SUDO systemctl daemon-reload
+  $SUDO systemctl enable ollama 2>/dev/null || true
+  # Restart so new env vars take effect
+  $SUDO systemctl restart ollama
+
+  local i=0
+  info "Waiting for Ollama to be ready..."
+  until ollama list >/dev/null 2>&1; do
+    sleep 2; i=$((i+2))
+    [[ $i -gt 60 ]] && { warn "Ollama slow to start — check: systemctl status ollama"; break; }
+  done
+  ok "Ollama running on 0.0.0.0:11434  (models: ${models_dir})"
 }
 
 # Return the mount point with the most free space (skip /, /boot, tmpfs, devtmpfs)
@@ -393,44 +397,7 @@ else
   ok "Found ${GPU_COUNT} GPU(s):"
   nvidia-smi --query-gpu=index,name,memory.total,driver_version \
     --format=csv,noheader 2>/dev/null | sed 's/^/       /'
-
-  # nvidia-container-toolkit
-  if ! command -v nvidia-ctk >/dev/null 2>&1; then
-    if [[ $AUTO_FIX -eq 1 ]]; then
-      install_nvidia_toolkit
-    else
-      fatal "nvidia-container-toolkit not found.\n  See: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html"
-    fi
-  else
-    ok "nvidia-container-toolkit $(nvidia-ctk --version 2>/dev/null | grep -oP '\d+\.\d+\.\d+' | head -1 || echo 'found')"
-  fi
-
-  # nvidia runtime in Docker
-  if ! docker info --format '{{.Runtimes}}' 2>/dev/null | grep -q nvidia; then
-    if [[ $AUTO_FIX -eq 1 ]]; then
-      configure_nvidia_runtime
-    else
-      fatal "nvidia runtime not in Docker.\n  Fix: sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker"
-    fi
-  else
-    ok "nvidia runtime registered in Docker"
-  fi
-
-  # Final confirmation: nvidia must appear in docker info runtimes
-  if docker info --format '{{json .Runtimes}}' 2>/dev/null | grep -q '"nvidia"'; then
-    ok "nvidia runtime confirmed in Docker"
-  else
-    if [[ $AUTO_FIX -eq 1 ]]; then
-      warn "nvidia runtime still missing after configure — retrying..."
-      configure_nvidia_runtime
-    else
-      warn "nvidia runtime not confirmed. Continuing — monitor ollama container startup."
-    fi
-  fi
-
-  # CUDA compute libraries — must exist on host so the toolkit can inject them
-  # into containers. Without this, nvidia-smi works but CUDA does not.
-  check_and_fix_cuda_libraries
+  ok "GPU ready — Ollama runs natively on host with direct GPU access"
 fi
 
 # ── Step 4: Disk space ────────────────────────────────────────────────────────
@@ -524,34 +491,30 @@ if [[ $DRY_RUN -eq 1 ]]; then
   exit 0
 fi
 
-# ── Step 8: Deploy ────────────────────────────────────────────────────────────
-step "8/9  Starting services"
+# ── Step 8: Host Ollama + model pull + LiteLLM Docker ────────────────────────
+step "8/9  Ollama (host) + LiteLLM (Docker)"
 
-# Pull images first (retry up to 3 times)
-info "Pulling Docker images..."
-retry 3 docker compose pull --quiet 2>/dev/null || \
-  warn "Image pull had issues — continuing with locally cached images"
+# Install and configure Ollama as a host systemd service for direct GPU access
+install_ollama_host
+start_ollama_service
 
-# If libcuda was just installed this run, force-recreate GPU containers so the
-# nvidia-container-toolkit injects CUDA libraries into a fresh container.
-# (docker compose up -d won't recreate a running container unless config changed.)
-if [[ $LIBCUDA_JUST_INSTALLED -eq 1 ]]; then
-  fixing "libcuda installed this run — force-recreating ollama to pick up CUDA injection..."
-  docker compose up -d --force-recreate ollama 2>/dev/null || true
-  info "Waiting 15s for ollama to restart before starting dependents..."
-  sleep 15
+# Pull models in background — qwen3.6:27b is 17 GB, don't block the deploy
+if [[ -f ollama/init-models.sh ]]; then
+  info "Pulling models in background (log: /tmp/ollama-model-pull.log)"
+  nohup bash ollama/init-models.sh > /tmp/ollama-model-pull.log 2>&1 &
+  ok "Model pull started — check with: ollama list"
 fi
 
-# Always recreate ollama-init so it picks up the freshly rendered init-models.sh.
-# docker compose up -d won't recreate it just because the mounted file changed.
-fixing "Recreating ollama-init to pick up latest init-models.sh..."
-docker compose up -d --force-recreate ollama-init 2>/dev/null || true
+# Stop any leftover ollama Docker containers (we now run ollama on the host)
+docker compose stop ollama ollama-init 2>/dev/null || true
+docker compose rm -f ollama ollama-init 2>/dev/null || true
 
-# --wait makes compose block until all health checks pass before returning,
-# which ensures dependent services (ollama-init, litellm) start in the right order.
-docker compose up -d --remove-orphans --wait --wait-timeout 300 \
-  || docker compose up -d --remove-orphans  # fallback for older compose versions
-ok "Containers started"
+# Pull and start LiteLLM
+info "Pulling LiteLLM image..."
+retry 3 docker compose pull --quiet 2>/dev/null || \
+  warn "Image pull had issues — continuing with cached image"
+docker compose up -d --remove-orphans
+ok "LiteLLM container started"
 
 step "9/9  Health check & auto-fix"
 # ── Wait for health (with auto-fix on failure) ────────────────────────────────
@@ -632,7 +595,8 @@ echo "║  LiteLLM API  →  http://<server>:8080/v1           ║"
 echo "║  LiteLLM UI   →  http://<server>:8080/ui           ║"
 echo "╚══════════════════════════════════════════════════════╝"
 echo ""
-echo "  Watch model pull:  docker compose logs -f ollama-init"
+echo "  Watch model pull:  tail -f /tmp/ollama-model-pull.log"
+echo "  List models:       ollama list"
 echo "  Health check:      ./manage.sh doctor"
 echo "  Add a model:       ./manage.sh add-model"
 echo ""
