@@ -239,3 +239,115 @@ container litellm is unhealthy
 [--]     [110s] waiting on: litellm
 [--]     [120s] waiting on: litellm
 [--]     [130s] waiting on: litellm
+ollama       | [GIN] 2026/06/29 - 04:22:29 | 200 |      92.513µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:22:39 | 200 |      43.682µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:22:39 | 200 |       91.12µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:22:49 | 200 |      49.873µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:22:49 | 200 |      94.867µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:22:59 | 200 |      34.755µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:22:59 | 200 |     129.762µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:23:09 | 200 |      37.129µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:23:09 | 200 |     138.479µs |       127.0.0.1 | GET      "/api/tags"
+litellm      | INFO:     172.20.0.1:53378 - "GET / HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:53378 - "GET /openapi.json HTTP/1.1" 200 OK
+ollama-init  | /init-models.sh: line 8: curl: command not found
+litellm      | INFO:     172.20.0.1:53378 - "GET /ui HTTP/1.1" 307 Temporary Redirect
+litellm      | INFO:     172.20.0.1:53378 - "GET /litellm/.well-known/litellm-ui-config HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:53378 - "GET /public/litellm_blog_posts HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:53388 - "GET /litellm/.well-known/litellm-ui-config HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:53378 - "GET /ui/login?redirect_to=http%3A%2F%2Flocalhost%3A8080%2Fui%2F HTTP/1.1" 307 Temporary Redirect
+litellm      | INFO:     172.20.0.1:53396 - "GET /get/ui_theme_settings HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:53378 - "HEAD / HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:53378 - "GET /litellm/.well-known/litellm-ui-config HTTP/1.1" 200 OK
+litellm      | INFO:     172.20.0.1:53396 - "GET /litellm/.well-known/litellm-ui-config HTTP/1.1" 200 OK
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:23:20 | 200 |      47.429µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:23:20 | 200 |      92.834µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:23:30 | 200 |      49.663µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:23:30 | 200 |      97.703µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+litellm      | 04:23:35 - LiteLLM Proxy:ERROR: proxy_server.py:13840 - litellm.proxy.proxy_server.login_v2(): Exception occurred - Invalid credentials used to access UI.
+litellm      | Check 'UI_USERNAME', 'UI_PASSWORD' in .env file
+litellm      | Traceback (most recent call last):
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/proxy_server.py", line 13802, in login_v2
+litellm      |     login_result = await authenticate_user(
+litellm      |                    ^^^^^^^^^^^^^^^^^^^^^^^^
+litellm      |     ...<4 lines>...
+litellm      |     )
+litellm      |     ^
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/auth/login_utils.py", line 317, in authenticate_user
+litellm      |     raise ProxyException(
+litellm      |     ...<4 lines>...
+litellm      |     )
+litellm      | litellm.proxy._types.ProxyException: Invalid credentials used to access UI.
+litellm      | Check 'UI_USERNAME', 'UI_PASSWORD' in .env file
+litellm      | INFO:     172.20.0.1:47354 - "POST /v2/login HTTP/1.1" 401 Unauthorized
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:23:40 | 200 |      52.298µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:23:40 | 200 |     147.175µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:23:50 | 200 |      47.418µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:23:50 | 200 |      70.451µs |       127.0.0.1 | GET      "/api/tags"
+litellm      | 04:23:53 - LiteLLM Proxy:ERROR: internal_user_endpoints.py:1463 - litellm.proxy.proxy_server.user_update(): Exception occured - Not connected to DB!
+litellm      | Traceback (most recent call last):
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/internal_user_endpoints.py", line 1457, in user_update
+litellm      |     response = await _update_single_user_helper(
+litellm      |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+litellm      |     ...<2 lines>...
+litellm      |     )
+litellm      |     ^
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/internal_user_endpoints.py", line 1256, in _update_single_user_helper
+litellm      |     raise Exception("Not connected to DB!")
+litellm      | Exception: Not connected to DB!
+litellm      | 04:23:53 - LiteLLM Proxy:ERROR: proxy_server.py:13840 - litellm.proxy.proxy_server.login_v2(): Exception occurred - Authentication Error, Not connected to DB!
+litellm      | Traceback (most recent call last):
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/internal_user_endpoints.py", line 1457, in user_update
+litellm      |     response = await _update_single_user_helper(
+litellm      |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+litellm      |     ...<2 lines>...
+litellm      |     )
+litellm      |     ^
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/internal_user_endpoints.py", line 1256, in _update_single_user_helper
+litellm      |     raise Exception("Not connected to DB!")
+litellm      | Exception: Not connected to DB!
+litellm      |
+litellm      | During handling of the above exception, another exception occurred:
+litellm      |
+litellm      | Traceback (most recent call last):
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/proxy_server.py", line 13802, in login_v2
+litellm      |     login_result = await authenticate_user(
+litellm      |                    ^^^^^^^^^^^^^^^^^^^^^^^^
+litellm      |     ...<4 lines>...
+litellm      |     )
+litellm      |     ^
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/auth/login_utils.py", line 184, in authenticate_user
+litellm      |     await user_update(
+litellm      |     ...<7 lines>...
+litellm      |     )
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/management_helpers/utils.py", line 652, in wrapper
+litellm      |     raise e
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/management_helpers/utils.py", line 593, in wrapper
+litellm      |     result = await func(*args, **kwargs)
+litellm      |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+litellm      |   File "/app/.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/internal_user_endpoints.py", line 1478, in user_update
+litellm      |     raise ProxyException(
+litellm      |     ...<4 lines>...
+litellm      |     )
+litellm      | litellm.proxy._types.ProxyException: Authentication Error, Not connected to DB!
+litellm      | INFO:     172.20.0.1:57632 - "POST /v2/login HTTP/1.1" 400 Bad Request
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama-init  | /init-models.sh: line 8: curl: command not found
+ollama       | [GIN] 2026/06/29 - 04:24:00 | 200 |      49.302µs |       127.0.0.1 | HEAD     "/"
+ollama       | [GIN] 2026/06/29 - 04:24:00 | 200 |     100.016µs |       127.0.0.1 | GET      "/api/tags"
+ollama-init  | /init-models.sh: line 8: curl: command not found
