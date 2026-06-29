@@ -31,6 +31,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     environment:
+      - NVIDIA_VISIBLE_DEVICES=all
       - OLLAMA_HOST=0.0.0.0:11434
       - OLLAMA_KEEP_ALIVE=24h
       - OLLAMA_NUM_PARALLEL=4
