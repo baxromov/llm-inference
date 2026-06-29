@@ -625,7 +625,10 @@ info "Pulling Docker images..."
 retry 3 docker compose pull --quiet 2>/dev/null || \
   warn "Image pull had issues — continuing with locally cached images"
 
-docker compose up -d --remove-orphans
+# --wait makes compose block until all health checks pass before returning,
+# which ensures dependent services (ollama-init, litellm) start in the right order.
+docker compose up -d --remove-orphans --wait --wait-timeout 300 \
+  || docker compose up -d --remove-orphans  # fallback for older compose versions
 ok "Containers started"
 
 step "9/9  Health check & auto-fix"
