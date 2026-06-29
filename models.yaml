@@ -18,10 +18,7 @@ chat:
     description: "Qwen 3.6 27B — 17 GB VRAM, 256K context, text + vision"
     timeout: 300
     stream_timeout: 300
-    aliases:                           # OpenAI-compatible aliases (same model, different names)
-      - gpt-4
-      - gpt-4o
-      - gpt-3.5-turbo
+    aliases: []
 
   - name: gpt-oss-120b
     ollama_model: gpt-oss:120b
