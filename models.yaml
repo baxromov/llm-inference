@@ -27,13 +27,6 @@ chat:
     stream_timeout: 600
     aliases: []
 
-  - name: gemma4-31b
-    ollama_model: gemma4:31b
-    description: "Gemma 4 31B"
-    timeout: 600
-    stream_timeout: 600
-    aliases: []
-
   # ── To add another chat model, copy this block and uncomment:
   # - name: llama3.3-70b
   #   ollama_model: llama3.3:70b
