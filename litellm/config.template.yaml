@@ -14,6 +14,9 @@ general_settings:
   master_key: "os.environ/LITELLM_MASTER_KEY"
   store_model_in_db: false
   disable_error_logs: false
+  user_url_allowed_hosts:
+    - "172.31.174.11"
+    - "172.31.174.11:8123"
 
 router_settings:
   routing_strategy: simple-shuffle
