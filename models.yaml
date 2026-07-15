@@ -18,6 +18,8 @@ chat:
     description: "Qwen 3.6 27B — 17 GB VRAM, 256K context, text + vision"
     timeout: 300
     stream_timeout: 300
+    num_ctx: 32768                     # pin context so it matches the server's loaded runner and avoids reload-per-request
+    think: false                       # disable reasoning/thinking output — model generates hundreds of chain-of-thought tokens otherwise
     aliases: []
 
   - name: gpt-oss-120b
@@ -25,6 +27,7 @@ chat:
     description: "GPT-OSS 120B"
     timeout: 600
     stream_timeout: 600
+    num_ctx: 32768                     # pin context so it matches the server's loaded runner and avoids reload-per-request
     aliases: []
 
   # ── To add another chat model, copy this block and uncomment:

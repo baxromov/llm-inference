@@ -49,20 +49,26 @@ def render_litellm_config(models: dict) -> None:
             ollama_model = m["ollama_model"]
             timeout = m.get("timeout", 300)
             stream_timeout = m.get("stream_timeout", 300)
+            num_ctx = m.get("num_ctx")
+            think = m.get("think")
 
             lines.append(f"\n  # {desc}\n")
             lines.append(f"  - model_name: {m['name']}\n")
             lines.append(f"    litellm_params:\n")
             lines.append(f"      model: ollama_chat/{ollama_model}\n")
-            lines.append(f"      api_base: http://host.docker.internal:11434\n")
+            lines.append(f"      api_base: http://172.31.230.3:11434\n")
             lines.append(f"      stream_timeout: {stream_timeout}\n")
             lines.append(f"      timeout: {timeout}\n")
+            if num_ctx:
+                lines.append(f"      num_ctx: {num_ctx}\n")
+            if think is not None:
+                lines.append(f"      think: {str(think).lower()}\n")
 
             for alias in m.get("aliases", []):
                 lines.append(f"\n  - model_name: {alias}\n")
                 lines.append(f"    litellm_params:\n")
                 lines.append(f"      model: ollama_chat/{ollama_model}\n")
-                lines.append(f"      api_base: http://host.docker.internal:11434\n")
+                lines.append(f"      api_base: http://172.31.230.3:11434\n")
 
     lines.append("\n")
     with open(template_path) as f:

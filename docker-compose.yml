@@ -62,7 +62,7 @@ services:
     command:
       ["--config", "/app/config.yaml", "--port", "8080", "--num_workers", "1"]
     ports:
-      - "8080:8080"
+      - "8585:8080"
     logging:
       driver: json-file
       options:
