@@ -56,7 +56,13 @@ deploy-dev:
     # CI SSH session doesn't have (job 822's failure: "sudo: a terminal is
     # required to read the password"). A routine config redeploy should only
     # touch the app layer (render/pull/up/health-check), not host infra.
-    - ssh "$DEPLOY_USER@$DEPLOY_IP_DEV" "cd $DEPLOY_PATH && chmod +x deploy.sh manage.sh && ./deploy.sh --no-gpu --no-fix"
+    # No explicit chmod +x here -- deploy.sh/manage.sh are already committed
+    # executable and scp preserves the mode bit from the source file. An
+    # explicit chmod failed outright (job 825): these files are owned by
+    # bakhromovshb, and akbarovmabd's group-write access lets it overwrite
+    # their CONTENT via scp but not change their PERMISSION BITS -- that
+    # needs file ownership, which group membership doesn't grant.
+    - ssh "$DEPLOY_USER@$DEPLOY_IP_DEV" "cd $DEPLOY_PATH && ./deploy.sh --no-gpu --no-fix"
   environment:
     name: dev
     url: https://llm-gw.ai-dev.ipotekabank.uz
