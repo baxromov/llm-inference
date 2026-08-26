@@ -92,17 +92,6 @@ deploy-dev:
     - ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null
     - ssh-keyscan -H "$PREPROD_IP_ADDRESS" >> ~/.ssh/known_hosts
 
-show-env-preprod:
-  extends: .preprod-ssh-setup
-  stage: deploy
-  needs: []
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "staging"'
-      when: manual
-  allow_failure: true
-  script:
-    - ssh "$PREPROD_USER@$PREPROD_IP_ADDRESS" "cat ~/llm-inference-stage/.env"
-
 deploy-preprod:
   extends: .preprod-ssh-setup
   stage: deploy
