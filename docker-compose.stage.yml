@@ -29,7 +29,15 @@ services:
         max-file: "2"
 
   litellm:
-    image: ghcr.io/berriai/litellm:main-stable
+    # Docker Hub (litellm/litellm), NOT ghcr.io (unlike dev's docker-compose.yml)
+    # -- preprod has no egress to ghcr.io and opening it is slow/uncertain
+    # (IT's own read, 2026-08-26). Docker Hub already works transparently
+    # through the existing registry-mirror (docker-proxy-nexus.ipotekabank.uz
+    # in /etc/docker/daemon.json) -- no firewall change needed at all. Same
+    # image, same :main-stable tag, confirmed to exist on both registries
+    # (BerriAI publishes to both; Docker Hub just lacks arm64, irrelevant on
+    # this x86_64 host).
+    image: litellm/litellm:main-stable
     container_name: litellm-stage
     restart: unless-stopped
     depends_on:
