@@ -1,4 +1,6 @@
 .env
-infinity/models/
 data/
-prometheus/litellm_token
+docs/
+scratchpad/
+scratchpad_infra_report.html
+tmp/

@@ -428,7 +428,7 @@ step "6/9  Rendering configs from models.yaml"
 [[ ! -f scripts/render-configs.py ]] && fatal "scripts/render-configs.py not found."
 
 python3 scripts/render-configs.py || fatal "Config render failed. Check models.yaml syntax."
-ok "Configs rendered (litellm/config.yaml + ollama/init-models.sh)"
+ok "Configs rendered (litellm/config.yaml)"
 
 # ── Step 7: Validate docker-compose ──────────────────────────────────────────
 step "7/9  Validating docker-compose.yml"

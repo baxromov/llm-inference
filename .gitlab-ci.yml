@@ -21,7 +21,13 @@ deploy-dev:
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
   variables:
-    DEPLOY_PATH: "~/llm-inference"
+    # Hardcoded, not "~/llm-inference": the CI job SSHs in as $DEPLOY_USER
+    # (akbarovmabd, per the group variable), whose OWN home has no such
+    # directory -- the real, existing deployment lives under bakhromovshb's
+    # home specifically. Same class of mistake as proxy-light's ${HOME} bug
+    # earlier the same day (see DevOps/CLAUDE.md's proxy-light section) --
+    # this one broke job 822 the same way before being caught and fixed.
+    DEPLOY_PATH: "/home/bakhromovshb/llm-inference"
   before_script:
     - |
       command -v ssh >/dev/null 2>&1 || \
@@ -39,12 +45,18 @@ deploy-dev:
     - ssh-keyscan -H "$DEPLOY_IP_DEV" >> ~/.ssh/known_hosts
   script:
     - ssh "$DEPLOY_USER@$DEPLOY_IP_DEV" 'echo SSH_OK'
-    - scp docker-compose.yml deploy.sh manage.sh models.yaml "$DEPLOY_USER@$DEPLOY_IP_DEV:$DEPLOY_PATH/"
+    - scp docker-compose.yml deploy.sh manage.sh models.yaml .env.example "$DEPLOY_USER@$DEPLOY_IP_DEV:$DEPLOY_PATH/"
     - ssh "$DEPLOY_USER@$DEPLOY_IP_DEV" "rm -rf $DEPLOY_PATH/litellm && mkdir -p $DEPLOY_PATH/litellm"
     - scp -r litellm/. "$DEPLOY_USER@$DEPLOY_IP_DEV:$DEPLOY_PATH/litellm/"
     - ssh "$DEPLOY_USER@$DEPLOY_IP_DEV" "rm -rf $DEPLOY_PATH/scripts && mkdir -p $DEPLOY_PATH/scripts"
     - scp -r scripts/. "$DEPLOY_USER@$DEPLOY_IP_DEV:$DEPLOY_PATH/scripts/"
-    - ssh "$DEPLOY_USER@$DEPLOY_IP_DEV" "cd $DEPLOY_PATH && chmod +x deploy.sh manage.sh && ./deploy.sh --no-gpu"
+    # --no-fix: this host is already fully set up (Docker installed, .env in
+    # place) -- skip deploy.sh's host-level auto-fix steps (e.g. relocating
+    # Docker's data-root), which need interactive sudo that a non-interactive
+    # CI SSH session doesn't have (job 822's failure: "sudo: a terminal is
+    # required to read the password"). A routine config redeploy should only
+    # touch the app layer (render/pull/up/health-check), not host infra.
+    - ssh "$DEPLOY_USER@$DEPLOY_IP_DEV" "cd $DEPLOY_PATH && chmod +x deploy.sh manage.sh && ./deploy.sh --no-gpu --no-fix"
   environment:
     name: dev
     url: https://llm-gw.ai-dev.ipotekabank.uz
