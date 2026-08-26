@@ -47,6 +47,7 @@ services:
       - LITELLM_TELEMETRY=false
       - DATABASE_URL=postgresql://litellm:${POSTGRES_PASSWORD}@postgres:5432/litellm
       - STORE_MODEL_IN_DB=True
+      - LITELLM_DISABLE_NO_REDIS_WARNING=true
     command:
       ["--config", "/app/config.yaml", "--port", "8080", "--num_workers", "1"]
     ports:
