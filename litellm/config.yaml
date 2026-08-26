@@ -5,27 +5,6 @@
 
 model_list:
 
-  # ── CHAT / COMPLETION models via Ollama ──────────────────────────────
-
-  # Qwen 3.6 27B — 17 GB VRAM, 256K context, text + vision
-  - model_name: qwen3.6-27b
-    litellm_params:
-      model: ollama_chat/qwen3.6:27b
-      api_base: http://172.31.230.3:11434
-      stream_timeout: 300
-      timeout: 300
-      num_ctx: 32768
-      think: false
-
-  # GPT-OSS 120B
-  - model_name: gpt-oss-120b
-    litellm_params:
-      model: ollama_chat/gpt-oss:120b
-      api_base: http://172.31.230.3:11434
-      stream_timeout: 600
-      timeout: 600
-      num_ctx: 32768
-
 # ── LITELLM SETTINGS ─────────────────────────────────────────────────────────
 # Edit this file to change LiteLLM proxy behavior.
 # DO NOT edit litellm/config.yaml — it is auto-generated from models.yaml.
@@ -42,6 +21,7 @@ general_settings:
   master_key: "os.environ/LITELLM_MASTER_KEY"
   store_model_in_db: true
   disable_error_logs: false
+  store_prompts_in_spend_logs: true
   user_url_allowed_hosts:
     - "172.31.174.11"
     - "172.31.174.11:8123"

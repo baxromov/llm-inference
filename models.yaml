@@ -9,26 +9,42 @@
 #   1. Edit this file
 #   2. Run:  ./deploy.sh render          (just re-render, no restart)
 #      or:   ./manage.sh apply-models    (re-render + restart litellm)
+#
+# provider: ollama (default) — served by the shared Ollama instance on gpusrv02
+#           openai           — any OpenAI-compatible server (e.g. vLLM) at a
+#                               custom api_base (requires api_base + openai_model)
+# num_retries: per-model override of the global litellm_settings.num_retries.
+#              Set to 0 for models whose timeout is realistically reachable
+#              under load — retrying a slow-but-working backend just adds more
+#              concurrent load and makes it slower (retry storm). See
+#              DevOps CLAUDE.md "GPU Inference Server" notes, 2026-07-29.
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── Chat / Completion models (served by Ollama) ──────────────────────────────
-chat:
-  - name: qwen3.6-27b
-    ollama_model: qwen3.6:27b          # model tag used with `ollama pull`
-    description: "Qwen 3.6 27B — 17 GB VRAM, 256K context, text + vision"
-    timeout: 300
-    stream_timeout: 300
-    num_ctx: 32768                     # pin context so it matches the server's loaded runner and avoids reload-per-request
-    think: false                       # disable reasoning/thinking output — model generates hundreds of chain-of-thought tokens otherwise
-    aliases: []
+# NOTE: gemma4:31b (the primary chat model as of 2026-08-25) is intentionally
+# NOT listed here — it's managed as a litellm db_model (added/updated via the
+# /model/update API, id 21fe7883-2de6-4753-a59e-6f2fd2fd5ba9), not this config
+# file. Adding it here too would create a duplicate model_list entry under the
+# same model_name after render+restart. Params live in litellm's Postgres.
+chat: []
+  # ── Retired 2026-08-25, both stopped on gpusrv02 to dedicate full GPU capacity to gemma4:31b:
+  # - name: qwen3.6-27b
+  #   ollama_model: qwen3.6:27b
+  #   description: "Qwen 3.6 27B — 17 GB VRAM, 256K context, text + vision"
+  #   timeout: 300
+  #   stream_timeout: 300
+  #   num_ctx: 32768
+  #   think: false
+  #   aliases: []
 
-  - name: gpt-oss-120b
-    ollama_model: gpt-oss:120b
-    description: "GPT-OSS 120B"
-    timeout: 600
-    stream_timeout: 600
-    num_ctx: 32768                     # pin context so it matches the server's loaded runner and avoids reload-per-request
-    aliases: []
+  # - name: gpt-oss-120b
+  #   ollama_model: gpt-oss:120b
+  #   description: "GPT-OSS 120B"
+  #   timeout: 600
+  #   stream_timeout: 600
+  #   num_ctx: 32768
+  #   num_retries: 0
+  #   aliases: []
 
   # ── To add another chat model, copy this block and uncomment:
   # - name: llama3.3-70b
