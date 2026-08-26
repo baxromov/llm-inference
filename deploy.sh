@@ -143,55 +143,6 @@ configure_nvidia_runtime() {
   ok "nvidia runtime configured and Docker restarted"
 }
 
-# Install Ollama as a native binary on the host for direct GPU access.
-# Running on the host avoids all container GPU injection complexity (libcuda, CDI, etc.)
-install_ollama_host() {
-  if command -v ollama >/dev/null 2>&1; then
-    ok "Ollama $(ollama --version 2>/dev/null | grep -oP '\d+\.\d+\.\d+' | head -1 || echo 'found') already installed on host"
-    return 0
-  fi
-  fixing "Installing Ollama on host (native binary — direct GPU access, no container hassle)..."
-  curl -fsSL https://ollama.com/install.sh | $SUDO sh
-  command -v ollama >/dev/null 2>&1 || fatal "Ollama install failed — binary not found after install"
-  ok "Ollama installed on host"
-}
-
-# Configure Ollama systemd service: listen on all interfaces so LiteLLM Docker can reach it,
-# and store models on the large /data NVMe disk (2.9 TB).
-start_ollama_service() {
-  local override_dir="/etc/systemd/system/ollama.service.d"
-  local models_dir="/data/ollama"
-  # Fall back to home dir if /data doesn't have enough space
-  local data_free_gb
-  data_free_gb=$(df --output=avail /data 2>/dev/null | tail -1 | awk '{print int($1/1024/1024)}' || echo 0)
-  [[ "$data_free_gb" -lt 100 ]] && models_dir="/root/.ollama/models"
-
-  fixing "Configuring Ollama service (0.0.0.0:11434, models → ${models_dir})..."
-  $SUDO mkdir -p "$override_dir" "$models_dir"
-  $SUDO tee "${override_dir}/override.conf" > /dev/null << SVCEOF
-[Service]
-Environment="OLLAMA_HOST=0.0.0.0:11434"
-Environment="OLLAMA_MODELS=${models_dir}"
-Environment="OLLAMA_KEEP_ALIVE=24h"
-Environment="OLLAMA_NUM_PARALLEL=4"
-Environment="OLLAMA_MAX_LOADED_MODELS=3"
-Environment="OLLAMA_SCHED_SPREAD=1"
-SVCEOF
-
-  $SUDO systemctl daemon-reload
-  $SUDO systemctl enable ollama 2>/dev/null || true
-  # Restart so new env vars take effect
-  $SUDO systemctl restart ollama
-
-  local i=0
-  info "Waiting for Ollama to be ready..."
-  until ollama list >/dev/null 2>&1; do
-    sleep 2; i=$((i+2))
-    [[ $i -gt 60 ]] && { warn "Ollama slow to start — check: systemctl status ollama"; break; }
-  done
-  ok "Ollama running on 0.0.0.0:11434  (models: ${models_dir})"
-}
-
 # Return the mount point with the most free space (skip /, /boot, tmpfs, devtmpfs)
 find_best_large_mount() {
   df --output=target,avail -x tmpfs -x devtmpfs -x squashfs 2>/dev/null \
@@ -491,23 +442,12 @@ if [[ $DRY_RUN -eq 1 ]]; then
   exit 0
 fi
 
-# ── Step 8: Host Ollama + model pull + LiteLLM Docker ────────────────────────
-step "8/9  Ollama (host) + LiteLLM (Docker)"
-
-# Install and configure Ollama as a host systemd service for direct GPU access
-install_ollama_host
-start_ollama_service
-
-# Pull models in background — qwen3.6:27b is 17 GB, don't block the deploy
-if [[ -f ollama/init-models.sh ]]; then
-  info "Pulling models in background (log: /tmp/ollama-model-pull.log)"
-  nohup bash ollama/init-models.sh > /tmp/ollama-model-pull.log 2>&1 &
-  ok "Model pull started — check with: ollama list"
-fi
-
-# Stop any leftover ollama Docker containers (we now run ollama on the host)
-docker compose stop ollama ollama-init 2>/dev/null || true
-docker compose rm -f ollama ollama-init 2>/dev/null || true
+# ── Step 8: LiteLLM Docker ────────────────────────────────────────────────────
+# Ollama itself is NOT deployed by this repo — it runs natively on gpusrv02
+# (172.31.230.3), managed separately. LiteLLM here just talks to it as a
+# backend (models.yaml's api_base). Don't try to install/start Ollama on
+# whatever host this script runs on.
+step "8/9  LiteLLM (Docker)"
 
 # Pull and start LiteLLM
 info "Pulling LiteLLM image..."

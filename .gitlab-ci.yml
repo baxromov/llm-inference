@@ -1,0 +1,112 @@
+default:
+  tags:
+    - applied-ai-innovation
+  # Shell executor, same as every other repo in this group — no image:, no
+  # apk add. See proxy-light's .gitlab-ci.yml for the fuller history of why.
+
+stages:
+  - deploy
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dev (172.31.174.11). Automatic on push to dev. Deploys to the repo's
+# existing live path (~/llm-inference) rather than /opt/apps -- this
+# directory predates that convention and already has a real .env deploy.sh
+# won't touch. Runs the repo's own deploy.sh (--no-gpu: this host has no GPU
+# -- Ollama runs separately on gpusrv02) rather than a bare docker compose,
+# since deploy.sh already handles render/. env/pull/up/health-check
+# idempotently and is the same tool used for manual deploys here.
+# ─────────────────────────────────────────────────────────────────────────────
+deploy-dev:
+  stage: deploy
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+  variables:
+    DEPLOY_PATH: "~/llm-inference"
+  before_script:
+    - |
+      command -v ssh >/dev/null 2>&1 || \
+        { command -v dnf >/dev/null 2>&1 && dnf install -y openssh-clients; } || \
+        { command -v yum >/dev/null 2>&1 && yum install -y openssh-clients; } || \
+        { command -v apt-get >/dev/null 2>&1 && apt-get update -qq && apt-get install -y -qq openssh-client; }
+    - install -d -m 700 ~/.ssh
+    - |
+      printf '%s' "${DEV_DEPLOY_SSH_PRIVATE_KEY:?DEV_DEPLOY_SSH_PRIVATE_KEY is not set}" \
+        | tr -d '\r\n[:space:]' \
+        | base64 -d \
+        > ~/.ssh/id_ed25519
+    - chmod 600 ~/.ssh/id_ed25519
+    - ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null
+    - ssh-keyscan -H "$DEPLOY_IP_DEV" >> ~/.ssh/known_hosts
+  script:
+    - ssh "$DEPLOY_USER@$DEPLOY_IP_DEV" 'echo SSH_OK'
+    - scp docker-compose.yml deploy.sh manage.sh models.yaml "$DEPLOY_USER@$DEPLOY_IP_DEV:$DEPLOY_PATH/"
+    - ssh "$DEPLOY_USER@$DEPLOY_IP_DEV" "rm -rf $DEPLOY_PATH/litellm && mkdir -p $DEPLOY_PATH/litellm"
+    - scp -r litellm/. "$DEPLOY_USER@$DEPLOY_IP_DEV:$DEPLOY_PATH/litellm/"
+    - ssh "$DEPLOY_USER@$DEPLOY_IP_DEV" "rm -rf $DEPLOY_PATH/scripts && mkdir -p $DEPLOY_PATH/scripts"
+    - scp -r scripts/. "$DEPLOY_USER@$DEPLOY_IP_DEV:$DEPLOY_PATH/scripts/"
+    - ssh "$DEPLOY_USER@$DEPLOY_IP_DEV" "cd $DEPLOY_PATH && chmod +x deploy.sh manage.sh && ./deploy.sh --no-gpu"
+  environment:
+    name: dev
+    url: https://llm-gw.ai-dev.ipotekabank.uz
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Preprod (172.31.214.10). Manual on staging -- see DevOps/CLAUDE.md's
+# Preprod/staging rollout section for why preprod is runner-only. Lean
+# scp+compose deploy (not deploy.sh -- that script's host-level steps, like
+# relocating Docker's data-root, aren't appropriate for a shared host that's
+# already set up; see shared-services' own deploy-preprod for the same
+# reasoning). .env generated fresh on first deploy, idempotent thereafter.
+# ─────────────────────────────────────────────────────────────────────────────
+.preprod-ssh-setup:
+  before_script:
+    - |
+      command -v ssh >/dev/null 2>&1 || \
+        { command -v dnf >/dev/null 2>&1 && dnf install -y openssh-clients; } || \
+        { command -v yum >/dev/null 2>&1 && yum install -y openssh-clients; } || \
+        { command -v apt-get >/dev/null 2>&1 && apt-get update -qq && apt-get install -y -qq openssh-client; }
+    - install -d -m 700 ~/.ssh
+    - |
+      printf '%s' "${PREPROD_DEPLOY_SSH_PRIVATE_KEY:?PREPROD_DEPLOY_SSH_PRIVATE_KEY is not set}" \
+        | tr -d '\r\n[:space:]' \
+        | base64 -d \
+        > ~/.ssh/id_ed25519
+    - chmod 600 ~/.ssh/id_ed25519
+    - ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null
+    - ssh-keyscan -H "$PREPROD_IP_ADDRESS" >> ~/.ssh/known_hosts
+
+deploy-preprod:
+  extends: .preprod-ssh-setup
+  stage: deploy
+  needs: []
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "staging"'
+      when: manual
+  allow_failure: false
+  variables:
+    DEPLOY_PATH: "~/llm-inference-stage"
+  script:
+    - ssh "$PREPROD_USER@$PREPROD_IP_ADDRESS" 'echo SSH_OK'
+    - ssh "$PREPROD_USER@$PREPROD_IP_ADDRESS" "install -d $DEPLOY_PATH"
+    - scp docker-compose.stage.yml models.yaml "$PREPROD_USER@$PREPROD_IP_ADDRESS:$DEPLOY_PATH/"
+    - ssh "$PREPROD_USER@$PREPROD_IP_ADDRESS" "rm -rf $DEPLOY_PATH/litellm && mkdir -p $DEPLOY_PATH/litellm"
+    - scp -r litellm/. "$PREPROD_USER@$PREPROD_IP_ADDRESS:$DEPLOY_PATH/litellm/"
+    - |
+      ssh "$PREPROD_USER@$PREPROD_IP_ADDRESS" bash -s <<EOF
+      set -e
+      cd $DEPLOY_PATH
+      if [ ! -f .env ]; then
+        echo "No .env on host -- generating (first deploy)."
+        cat > .env <<ENVEOF
+      POSTGRES_PASSWORD=\$(openssl rand -hex 16)
+      LITELLM_MASTER_KEY=sk-\$(openssl rand -hex 24)
+      LITELLM_UI_USERNAME=admin
+      LITELLM_UI_PASSWORD=\$(openssl rand -hex 12)
+      ENVEOF
+      fi
+      sudo docker compose -p llm-gateway-stage -f docker-compose.stage.yml pull
+      sudo docker compose -p llm-gateway-stage -f docker-compose.stage.yml up -d
+      sudo docker compose -p llm-gateway-stage -f docker-compose.stage.yml ps
+      EOF
+  environment:
+    name: preprod
+    url: https://llm-gw.ai-stage.ipotekabank.uz

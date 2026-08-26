@@ -1,194 +1,109 @@
-# LLM Inference Stack
+# llm-inference (llm-gateway)
 
-Self-hosted LLM platform on a private GPU server.
-Single API endpoint, fully offline after initial setup, one-command deploy.
+LiteLLM proxy — the shared OpenAI-compatible API gateway in front of the org's LLM backends.
+Deployed on the dev server (`172.31.174.11`, port `8585`, domain `llm-gw.ai-dev.ipotekabank.uz`
+via `proxy-light`); a preprod deploy on `172.31.214.10` (`llm-gw.ai-stage.ipotekabank.uz`) follows
+the same `dev`/`staging` branch pattern as every other repo in this org.
 
----
+## What this repo does NOT include
 
-## Architecture
-
-```
-┌─────────────────────────────────────────┐
-│         models.yaml  ← edit here        │
-│   (single source of truth for models)   │
-└──────────────┬──────────────────────────┘
-               │ render           │ render
-               ▼                  ▼
-    litellm/config.yaml   ollama/init-models.sh
-               │                  │
-               ▼                  ▼
-          ┌─────────┐        ┌────────┐
-          │ LiteLLM │◄──────►│ Ollama │
-          │  :8080  │        │  LLM   │
-          └─────────┘        │ GPU0+1 │
-                             └────────┘
-```
+Ollama (the actual model runtime) is **not** deployed by this repo — it runs natively as a
+systemd service on the GPU server (`gpusrv02`, `172.31.230.3`), managed separately. This repo's
+LiteLLM proxy just talks to it as a backend (`models.yaml`'s `api_base`). An earlier version of
+this repo assumed Ollama would be co-located here (`ollama/`, `SETUP_GPU_SERVER.md`,
+`manage.sh ollama-gpu`, etc.) — that plan changed and those pieces were removed 2026-08-26 to
+avoid the confusion of dead, misleading tooling. `grafana/`, `infinity/`, `postgres/initdb/`,
+`prometheus/` were also removed the same day — none of them were ever wired into
+`docker-compose.yml`.
 
 ## Services
 
 | Component | Role | Port |
-|-----------|------|------|
-| **LiteLLM** | OpenAI-compatible API gateway + UI | `8080` |
-| **Ollama** | Runs LLM on GPU | internal |
+|---|---|---|
+| **LiteLLM** | OpenAI-compatible API gateway + UI | `8585` (host) → `8080` (container) |
+| **Postgres** | LiteLLM's own DB — UI login, user management, `store_model_in_db` | internal |
 
-## GPU allocation
-
-```
-GPU 0 + GPU 1  →  Ollama   qwen3.6:27b — 17 GB VRAM (split across both)
-```
-
-2x A100 80 GB = 160 GB total VRAM. `OLLAMA_SCHED_SPREAD=1` lets Ollama spread layers across both cards.
-
----
-
-## Getting started
-
-### Prerequisites (one-time, on the GPU server)
+## Deploy
 
 ```bash
-# Docker 24+
-docker --version
-
-# NVIDIA Container Toolkit
-nvidia-smi
-docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
-```
-
-If the last command shows your GPUs, you're ready.
-
-### Deploy — single command
-
-```bash
-./deploy.sh
-```
-
-On first run it will:
-1. Check prereqs (Docker, NVIDIA, Python)
-2. Create `.env` with auto-generated secrets
-3. Re-render configs from `models.yaml`
-4. Start all services and wait for healthy status
-
-The first startup pulls `qwen3.6:27b` (~17 GB). Watch progress:
-
-```bash
-docker compose logs -f ollama-init
-```
-
-#### Deploy options
-
-```bash
-./deploy.sh              # full deploy
-./deploy.sh render       # re-render configs only (no Docker changes)
-./deploy.sh --no-gpu     # skip GPU checks (dev/CI)
+./deploy.sh              # full deploy (idempotent — safe to re-run)
+./deploy.sh render       # re-render litellm/config.yaml from models.yaml only
 ./deploy.sh --dry-run    # validate everything without starting containers
 ```
 
----
+CI (`.gitlab-ci.yml`) does the same thing over SSH — automatic on push to `dev`, manual on
+`staging` (preprod, runner-only — see `DevOps/CLAUDE.md`'s Preprod/staging rollout section for
+why direct SSH there doesn't work).
 
 ## Daily operations — manage.sh
 
 ```bash
-./manage.sh doctor          # health check: GPU, containers, disk, API
+./manage.sh doctor          # health check: containers, disk, API
 ./manage.sh fix             # restart unhealthy containers, refresh configs
-./manage.sh status          # compact overview of all containers + GPU
+./manage.sh status          # compact overview of all containers
 ./manage.sh logs litellm    # tail logs for any service
 ./manage.sh restart litellm # restart one or more services
 ./manage.sh add-model       # interactive wizard to add a new model
 ./manage.sh apply-models    # re-render configs + restart affected services
 ./manage.sh update-images   # pull latest pinned Docker images
-./manage.sh shell ollama    # open a shell inside a container
+./manage.sh shell litellm   # open a shell inside a container
 ```
-
----
 
 ## Adding a new model
 
-All models are configured in **`models.yaml`** — the single source of truth.
-Changing this file and re-rendering updates LiteLLM and Ollama automatically.
-
-### Interactive (recommended)
-
-```bash
-./manage.sh add-model
-```
-
-### Manual
-
-1. Add to `models.yaml` under `chat:`:
-
-```yaml
-chat:
-  - name: llama3.3-70b
-    ollama_model: llama3.3:70b
-    description: "Llama 3.3 70B"
-    timeout: 600
-    stream_timeout: 600
-    aliases: []
-```
-
-2. Apply:
+All models are configured in **`models.yaml`** — the single source of truth. See the file's own
+header comment for the `provider: ollama` vs `provider: openai` (vLLM etc.) schema and the
+`num_retries`/timeout guidance (retry-storm history: `DevOps/CLAUDE.md`'s GPU Inference Server
+notes, 2026-07-29).
 
 ```bash
+./manage.sh add-model       # interactive
+# or edit models.yaml directly, then:
 ./deploy.sh render
-docker exec -it ollama ollama pull llama3.3:70b
 docker compose restart litellm
 ```
 
----
+The model itself still needs pulling on the Ollama host separately (not through this repo):
+```bash
+ssh root@172.31.230.3 ollama pull <tag>
+```
+
+Note: as of 2026-08-25, the primary chat model (`gemma4:31b`) is managed as a LiteLLM `db_model`
+(added via the `/model/update` API), not listed in `models.yaml` — see the file's own comment for
+why duplicating it there would break the render.
 
 ## File structure
 
 ```
 llm-inference/
-├── deploy.sh                  ← one-command deploy
+├── deploy.sh                  ← one-command deploy (self-healing, idempotent)
 ├── manage.sh                  ← devops: doctor / fix / logs / add-model / ...
 ├── models.yaml                ← ALL models defined here (single source of truth)
-├── docker-compose.yml         ← 3 services: ollama, ollama-init, litellm
-├── .env.example               ← copy to .env (auto-done by deploy.sh)
+├── docker-compose.yml         ← 2 services: postgres, litellm
+├── .env.example                ← copy to .env (auto-done by deploy.sh)
 │
 ├── scripts/
-│   └── render-configs.py      ← generates the 2 files below from models.yaml
+│   └── render-configs.py      ← generates litellm/config.yaml from models.yaml
 │
 ├── litellm/
 │   ├── config.yaml            ← AUTO-GENERATED (do not edit directly)
 │   └── config.template.yaml   ← LiteLLM proxy settings (edit this)
 │
-└── ollama/
-    └── init-models.sh         ← AUTO-GENERATED
+├── FIX_DISK.md                 ← disk-space runbook
+└── OLLAMA_TTFT_OPTIMIZATION.md ← litellm-side tuning notes for the Ollama backend
 ```
-
----
 
 ## Using the API
 
-All requests go to `http://<server>:8080/v1` with:
 ```
 Authorization: Bearer <LITELLM_MASTER_KEY from .env>
 ```
 
-### Chat
-
 ```bash
-curl http://localhost:8080/v1/chat/completions \
+curl https://llm-gw.ai-dev.ipotekabank.uz/v1/chat/completions \
   -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model": "qwen3.6-27b", "messages": [{"role": "user", "content": "Salom"}]}'
-```
-
-### OCR / Vision
-
-```bash
-IMAGE_B64=$(base64 -w0 document.jpg)
-curl http://localhost:8080/v1/chat/completions \
-  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"qwen3.6-27b\",
-    \"messages\": [{\"role\": \"user\", \"content\": [
-      {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/jpeg;base64,${IMAGE_B64}\"}},
-      {\"type\": \"text\", \"text\": \"Bu rasmdagi matnni chiqar\"}
-    ]}]
-  }"
+  -d '{"model": "gemma4:31b", "messages": [{"role": "user", "content": "Salom"}]}'
 ```
 
 ### Python (OpenAI SDK — zero code changes)
@@ -197,77 +112,45 @@ curl http://localhost:8080/v1/chat/completions \
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://<server>:8080/v1",
+    base_url="https://llm-gw.ai-dev.ipotekabank.uz/v1",
     api_key="<LITELLM_MASTER_KEY>"
 )
 
 response = client.chat.completions.create(
-    model="gpt-4",          # alias → routes to qwen3.6:27b automatically
+    model="gemma4:31b",
     messages=[{"role": "user", "content": "Salom"}]
 )
 print(response.choices[0].message.content)
 ```
 
----
-
 ## Dashboard
 
 | Dashboard | URL | Login |
-|-----------|-----|-------|
-| **LiteLLM UI** — API key management, usage | `http://<server>:8080/ui` | `LITELLM_UI_USERNAME` / `LITELLM_UI_PASSWORD` |
-
----
+|---|---|---|
+| **LiteLLM UI** — API key management, usage | `https://llm-gw.ai-dev.ipotekabank.uz/ui` | `LITELLM_UI_USERNAME` / `LITELLM_UI_PASSWORD` |
 
 ## Troubleshooting
 
-### Comprehensive health check
-
 ```bash
-./manage.sh doctor
+./manage.sh doctor   # comprehensive health check
+./manage.sh fix      # restart unhealthy services automatically
 ```
-
-### Restart unhealthy services automatically
-
-```bash
-./manage.sh fix
-```
-
-### Common issues
 
 | Symptom | Likely cause | Fix |
-|---------|-------------|-----|
-| `ollama` won't start | GPU not visible to Docker | `sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker` |
-| `litellm` → `502` errors | Ollama still starting | Wait ~2 min, then `./manage.sh doctor` |
+|---|---|---|
+| `litellm` → `502`/timeout errors | Ollama backend (gpusrv02) slow/overloaded, not this container | See `DevOps/CLAUDE.md`'s GPU Inference Server notes |
 | LiteLLM UI shows no models | Config not loaded | `docker compose restart litellm && docker compose logs litellm` |
-| Disk full | Large model weights + logs | `docker system prune -f` then check `df -h` |
-| GPU out of memory | Too many models loaded | Set `OLLAMA_MAX_LOADED_MODELS=1` then `docker compose restart ollama` |
-
-### View logs
+| Disk full | Logs / old images | `docker system prune -f` then check `df -h` |
+| Retry storm (backend timeout amplifies into 3x load) | `num_retries` not pinned per-model, or DB-stored `router_settings.model_group_retry_policy` overriding it | See `DevOps/CLAUDE.md`'s retry-storm postmortem — the config-file `num_retries` alone is not sufficient with `store_model_in_db: true` |
 
 ```bash
 ./manage.sh logs litellm
-./manage.sh logs ollama
-docker compose logs -f         # all services
+docker compose logs -f          # all services
 ```
-
-### Common commands
-
-```bash
-# Stop everything (keeps data)
-docker compose down
-
-# Stop and wipe all data (fresh start)
-docker compose down -v
-
-# Live GPU stats
-watch -n2 "docker exec ollama nvidia-smi"
-```
-
----
 
 ## Updating image versions
 
-Image versions are pinned in `docker-compose.yml`. To update:
+Image versions are pinned in `docker-compose.yml`.
 
 ```bash
 ./manage.sh update-images

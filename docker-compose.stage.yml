@@ -1,0 +1,71 @@
+# Preprod (172.31.214.10) LiteLLM proxy. Same services/images as
+# docker-compose.yml (dev) — only real differences: container names
+# (avoids any collision if ever run on the same host) and the LiteLLM port
+# bound to 127.0.0.1 instead of 0.0.0.0, so proxy-light-stage
+# (llm-gw.ai-stage.ipotekabank.uz) is the only path in, not raw ip:port
+# (2026-08-26 hardening pass, same reasoning as shared-services' langfuse fix
+# and monitoring's grafana fix). Points at the same shared Ollama backend on
+# gpusrv02 as dev — there's no separate "staging GPU".
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: litellm-postgres-stage
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=litellm
+      - POSTGRES_USER=litellm
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "2"
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    container_name: litellm-stage
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml:ro
+    environment:
+      - LITELLM_CONFIG_PATH=/app/config.yaml
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      - UI_USERNAME=${LITELLM_UI_USERNAME}
+      - UI_PASSWORD=${LITELLM_UI_PASSWORD}
+      - LITELLM_TELEMETRY=false
+      - DATABASE_URL=postgresql://litellm:${POSTGRES_PASSWORD}@postgres:5432/litellm
+      - STORE_MODEL_IN_DB=True
+    command:
+      ["--config", "/app/config.yaml", "--port", "8080", "--num_workers", "1"]
+    ports:
+      - "127.0.0.1:8585:8080"
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python3 -c ''import urllib.request; urllib.request.urlopen("http://localhost:8080/")''',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  postgres_data:

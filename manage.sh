@@ -223,7 +223,7 @@ logs() {
   SVC="${1:-}"
   if [[ -z "$SVC" ]]; then
     echo "Usage: ./manage.sh logs <service>"
-    echo "Services: ollama, ollama-init, litellm"
+    echo "Services: litellm, postgres"
     exit 1
   fi
   exec docker compose logs -f --tail=100 "$SVC"
@@ -244,23 +244,7 @@ apply_models() {
   echo ""
   echo -e "${BOLD}${CYAN}── Apply models — configs already rendered & pulled via git ─${NC}"
   echo ""
-  info "Which services need restarting?"
-  echo "  1) litellm only   (changed timeout or removed model)"
-  echo "  2) litellm + pull new Ollama model   (added a new model)"
-  echo ""
-  read -rp "  Choice [1/2]: " CHOICE
-
-  case "$CHOICE" in
-    1)
-      docker compose restart litellm
-      ;;
-    2)
-      info "Pulling new Ollama model(s) via init-models.sh ..."
-      bash ollama/init-models.sh
-      docker compose restart litellm
-      ;;
-    *) warn "Invalid choice — restart manually: docker compose restart litellm" ;;
-  esac
+  docker compose restart litellm
   ok "Done. Check ./manage.sh doctor for health."
 }
 
@@ -291,7 +275,7 @@ add_model() {
 ${ALIASES_YAML}
 YAML
   ok "Added ${MODEL_NAME} to models.yaml"
-  info "To pull the model: docker exec -it ollama ollama pull ${OLLAMA_TAG}"
+  info "Pull it on the Ollama host (gpusrv02): ssh root@172.31.230.3 ollama pull ${OLLAMA_TAG}"
 
   echo ""
   read -rp "  Apply now? (re-render + restart litellm) [y/N]: " APPLY
@@ -300,11 +284,6 @@ YAML
   else
     info "Run './manage.sh apply-models' when ready."
   fi
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
-ollama_gpu() {
-  bash scripts/setup-ollama.sh "${1:-check}"
 }
 
 update_images() {
@@ -338,9 +317,8 @@ help() {
   echo "    apply-models     re-render configs from models.yaml + restart services"
   echo "    update-images    pull latest pinned Docker images"
   echo "    shell <svc>      open an interactive shell in a container"
-  echo "    ollama-gpu       check/install Ollama GPU-only config"
   echo ""
-  echo "  Services: ollama  ollama-init  litellm"
+  echo "  Services: litellm  postgres"
   echo ""
   echo "  Examples:"
   echo "    ./manage.sh doctor"
@@ -362,7 +340,6 @@ case "$CMD" in
   apply-models)  apply_models ;;
   update-images) update_images ;;
   shell)         shell_svc "$@" ;;
-  ollama-gpu)    ollama_gpu "${1:-check}" ;;
   help|--help|-h) help ;;
   *)
     warn "Unknown command: ${CMD}"
